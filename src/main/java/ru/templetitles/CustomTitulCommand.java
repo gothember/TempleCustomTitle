@@ -10,9 +10,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Material;
 import org.bukkit.Bukkit;
 // Removed ChatColor import as DataManager provides translated strings
-import java.util.ArrayList; // Added for lore processing
-import java.util.List; // Added for lore processing
-// Removed Arrays import as it might not be needed if lore is processed differently
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map; // Added for Map
 
 public class CustomTitulCommand implements CommandExecutor {
     private final TempleTitles plugin;
@@ -67,6 +67,19 @@ public class CustomTitulCommand implements CommandExecutor {
             requestTitleItem.setItemMeta(requestTitleMeta);
         }
         gui.setItem(22, requestTitleItem);
+
+        // Add decorations
+        Map<Integer, ItemStack> decorations = dataManager.getGuiMainMenuDecorations();
+        if (decorations != null) {
+            for (Map.Entry<Integer, ItemStack> entry : decorations.entrySet()) {
+                int slot = entry.getKey();
+                // Ensure decorations don't overwrite functional items (slots 20 and 22)
+                // Also check if slot is within GUI bounds (though DataManager should already validate this)
+                if (slot >= 0 && slot < gui.getSize() && gui.getItem(slot) == null) { 
+                    gui.setItem(slot, entry.getValue().clone()); // Use clone to prevent issues if the same ItemStack object is used elsewhere
+                }
+            }
+        }
         
         player.openInventory(gui);
 

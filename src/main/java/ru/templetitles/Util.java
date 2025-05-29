@@ -1,52 +1,45 @@
 package ru.templetitles;
 
-import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import java.util.Arrays;
-import java.util.List;
+import org.bukkit.ChatColor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.List; // Added for List
+import java.util.ArrayList; // Added for ArrayList
 
 public class Util {
 
-    /**
-     * Creates an ItemStack for a GUI with a given material, display name, and lore lines.
-     *
-     * @param material    The Material for the ItemStack.
-     * @param displayName The display name for the ItemStack.
-     * @param loreLines   Variable arguments for lore lines.
-     * @return The created ItemStack.
-     */
-    public static ItemStack createGuiItem(Material material, String displayName, String... loreLines) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) { // ItemMeta can be null for some materials, though unlikely for common GUI items
-            meta.setDisplayName(displayName);
-            if (loreLines != null && loreLines.length > 0) {
-                meta.setLore(Arrays.asList(loreLines));
-            }
-            item.setItemMeta(meta);
+    // Pattern to match &#RRGGBB
+    private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+
+    public static String translateColors(String textToTranslate) {
+        if (textToTranslate == null) return ""; // Return empty string for null input
+
+        Matcher matcher = HEX_PATTERN.matcher(textToTranslate);
+        StringBuffer buffer = new StringBuffer(textToTranslate.length() + 4 * 8); // Pre-allocate buffer
+
+        while (matcher.find()) {
+            String group = matcher.group(1); // The RRGGBB part
+            // Replace &#RRGGBB with §x§R§R§G§G§B§B sequence
+            matcher.appendReplacement(buffer, ChatColor.COLOR_CHAR + "x"
+                    + ChatColor.COLOR_CHAR + group.charAt(0) + ChatColor.COLOR_CHAR + group.charAt(1)
+                    + ChatColor.COLOR_CHAR + group.charAt(2) + ChatColor.COLOR_CHAR + group.charAt(3)
+                    + ChatColor.COLOR_CHAR + group.charAt(4) + ChatColor.COLOR_CHAR + group.charAt(5)
+            );
         }
-        return item;
+        matcher.appendTail(buffer);
+
+        // Now translate legacy & codes
+        return ChatColor.translateAlternateColorCodes('&', buffer.toString());
     }
 
-    /**
-     * Creates an ItemStack for a GUI with a given material, display name, and a list of lore lines.
-     *
-     * @param material    The Material for the ItemStack.
-     * @param displayName The display name for the ItemStack.
-     * @param lore        A List of Strings for the lore.
-     * @return The created ItemStack.
-     */
-    public static ItemStack createGuiItem(Material material, String displayName, List<String> lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(displayName);
-            if (lore != null) {
-                meta.setLore(lore);
-            }
-            item.setItemMeta(meta);
+    // Helper for lists
+    public static List<String> translateStringList(List<String> list) {
+        if (list == null || list.isEmpty()) return new ArrayList<>(); // Return new empty list if input is null or empty
+        List<String> translatedList = new ArrayList<>();
+        for (String s : list) {
+            // Ensure individual strings in the list are also handled if they are null
+            translatedList.add(translateColors(s != null ? s : "")); 
         }
-        return item;
+        return translatedList;
     }
 }

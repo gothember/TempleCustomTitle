@@ -34,17 +34,28 @@ public class GUIListener implements Listener {
 
         // Compare with titles from DataManager
         if (viewTitle.equals(dataManager.getGuiMainMenuTitle())) {
-            event.setCancelled(true);
+            event.setCancelled(true); // Cancel event for all clicks in this GUI
+
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+            
+            int clickedSlot = event.getSlot(); // Use getSlot() for raw slot index
+
+            // Check if the clicked slot is a decoration slot and not a functional slot
+            if (dataManager.getGuiMainMenuDecorations() != null &&
+                dataManager.getGuiMainMenuDecorations().containsKey(clickedSlot) &&
+                clickedSlot != 20 && clickedSlot != 22) { // Functional slots
+                // It's a decoration item, already cancelled, so just return to do nothing.
+                return;
+            }
 
             // Assuming item names are also from DataManager for robustness, though not strictly required by task for click logic
             // String requestItemName = dataManager.getGuiMainMenuItemRequestName();
             // String viewOwnedItemName = dataManager.getGuiMainMenuItemViewOwnedName();
 
             // Logic based on slot as before, assuming fixed layout
-            int slot = event.getRawSlot();
-            if (slot == 22 && clickedItem.getType() == Material.PAPER) { // Request New Title
+            // int slot = event.getRawSlot(); // Already have clickedSlot
+            if (clickedSlot == 22 && clickedItem.getType() == Material.PAPER) { // Request New Title
                 int requiredTokens = dataManager.getTitleRequestCost();
                 if (dataManager.getPlayerTokens(player.getUniqueId()) >= requiredTokens) {
                     dataManager.removePlayerTokens(player.getUniqueId(), requiredTokens);
@@ -52,15 +63,16 @@ public class GUIListener implements Listener {
                     titleInputManager.startTitleInput(player);
                     player.sendMessage(dataManager.getMsgTitleInputPrompt()); // Use DataManager
                 } else {
-                    player.sendMessage(dataManager.getMsgInsufficientTokens().replace("%required_tokens%", String.valueOf(requiredTokens))); // Use DataManager
+                    player.sendMessage(dataManager.getMsgInsufficientTokens().replace("%required_tokens%", String.valueOf(requiredTokens)));
                     player.closeInventory();
                 }
-            } else if (slot == 20 && clickedItem.getType() == Material.BOOK) { // View Titles
+            } else if (clickedSlot == 20 && clickedItem.getType() == Material.BOOK) { // View Titles
                 List<PlayerTitle> playerTitles = dataManager.getPlayerTitles(player.getUniqueId());
                 PlayerTitlesViewGUI.openPlayerTitlesView(player, playerTitles, dataManager, plugin);
             }
+            // Other clicks in this GUI are implicitly handled by the decoration check or if they don't match slots 20/22
 
-        } else if (viewTitle.equals(dataManager.getGuiPlayerTitlesViewTitle())) { // Use DataManager
+        } else if (viewTitle.equals(dataManager.getGuiPlayerTitlesViewTitle())) { 
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() != Material.PAPER) return;
