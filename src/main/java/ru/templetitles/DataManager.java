@@ -28,6 +28,58 @@ public class DataManager {
     private String msgRequestSubmitted;
     private String msgTitleApproved;
     private String msgTitleRejected;
+
+    // General messages (new ones)
+    private String msgPlayerOnlyCommand;
+    private String msgPermissionDenied;
+    private String msgTitleInputPrompt;
+    private String msgTitleInputTooShort;
+    private String msgTitleInputTooLong;
+    private String msgTitleInputCancelled;
+    private String msgTitleEquipped;
+    private String msgErrorGeneric; // For errors like PDS data missing
+    private String msgAdminRequestStale;
+    private String msgAdminTitleApprovedFeedback; // For admin, e.g., "Title '%title%' approved for %player%."
+    private String msgAdminTitleRejectedFeedback; // For admin, e.g., "Title '%title%' rejected for %player%."
+
+    // GUI: main_menu
+    private String guiMainMenuTitle;
+    private String guiMainMenuItemRequestName;
+    private List<String> guiMainMenuItemRequestLore;
+    private String guiMainMenuItemRequestNoTokensLore; // Special lore line if not enough tokens
+    private String guiMainMenuItemViewOwnedName;
+    private List<String> guiMainMenuItemViewOwnedLore;
+
+    // GUI: player_titles_view
+    private String guiPlayerTitlesViewTitle;
+    private String guiPlayerTitlesViewItemNamePrefix; // e.g., "&f"
+    private List<String> guiPlayerTitlesViewItemLoreBase; // Base lore applied to all titles
+    private List<String> guiPlayerTitlesViewItemLoreStatusLine; // Format for "Status: %status%"
+    private List<String> guiPlayerTitlesViewItemLoreAdminLine; // Format for "Approved by: %admin%"
+    private List<String> guiPlayerTitlesViewItemLoreDateLine; // Format for "Approved on: %date%"
+    private List<String> guiPlayerTitlesViewItemLoreEquipInstruction; // e.g., "LMB to equip"
+    private List<String> guiPlayerTitlesViewItemLoreNotApprovedInstruction; // e.g., "Cannot equip (not approved)"
+
+    // GUI: admin_requests_view
+    private String guiAdminRequestsViewTitle;
+    private String guiAdminRequestsViewNoRequestsItemName;
+    private List<String> guiAdminRequestsViewNoRequestsItemLore;
+    private String guiAdminRequestsViewRequestItemNamePrefix; // e.g., "&bTitle: &f"
+    private List<String> guiAdminRequestsViewRequestItemLore; // Base lore, placeholders for player, submitted date, instructions
+
+    // Commands: tokens
+    private String cmdTokensUsage;
+    private String cmdTokensAmountPositive;
+    private String cmdTokensInvalidAmount;
+    private String cmdTokensUnknownSubcommand;
+    
+    // Title Properties
+    private int titleMinLength;
+    private int titleMaxLength;
+    private String titleStatusApprovedText; // Text for "одобрен" status in GUIs
+    private String titleStatusRejectedText; // Text for "отклонен" status
+    private String titleStatusPendingText;  // Text for "на рассмотрении" status
+
     private File pendingTitlesFile;
     private FileConfiguration pendingTitlesConfig;
     private File playerTitlesFile;
@@ -73,6 +125,57 @@ public class DataManager {
         msgRequestSubmitted = plugin.getConfig().getString("messages.request_submitted", "&aYour title request for '%title%' has been submitted.");
         msgTitleApproved = plugin.getConfig().getString("messages.title_approved_player", "&aYour title '%title%' has been approved!");
         msgTitleRejected = plugin.getConfig().getString("messages.title_rejected_player", "&cYour title '%title%' has been rejected.");
+
+        // General Messages (New)
+        msgPlayerOnlyCommand = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.player_only_command", "&cThis command can only be run by a player."));
+        msgPermissionDenied = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.permission_denied", "&cYou do not have permission to use this command."));
+        msgTitleInputPrompt = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.title_input_prompt", "&aPlease type your desired title in chat. Type 'cancel' to abort."));
+        msgTitleInputTooShort = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.title_input_too_short", "&cTitle must be at least %min_length% characters."));
+        msgTitleInputTooLong = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.title_input_too_long", "&cTitle must be at most %max_length% characters."));
+        msgTitleInputCancelled = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.title_input_cancelled", "&eTitle request cancelled."));
+        msgTitleEquipped = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.title_equipped", "&aTitle '%title%' equipped!"));
+        msgErrorGeneric = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.error_generic", "&cAn unexpected error occurred. Please contact an administrator."));
+        msgAdminRequestStale = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.admin_request_stale", "&cThis request seems to be outdated or already processed."));
+        msgAdminTitleApprovedFeedback = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.admin_title_approved_feedback", "&aTitle '%title%' approved for player %player%."));
+        msgAdminTitleRejectedFeedback = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.general.admin_title_rejected_feedback", "&cTitle '%title%' rejected for player %player%."));
+        
+        // GUI: main_menu
+        guiMainMenuTitle = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.main_menu.title", "&5Custom Title Options"));
+        guiMainMenuItemRequestName = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.main_menu.items.request_title.name", "&bRequest a New Title"));
+        guiMainMenuItemRequestLore = translateStringList(plugin.getConfig().getStringList("gui.main_menu.items.request_title.lore"));
+        guiMainMenuItemRequestNoTokensLore = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.main_menu.items.request_title.no_tokens_lore", "&cNot enough tokens!"));
+        guiMainMenuItemViewOwnedName = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.main_menu.items.view_owned.name", "&aView Your Titles"));
+        guiMainMenuItemViewOwnedLore = translateStringList(plugin.getConfig().getStringList("gui.main_menu.items.view_owned.lore"));
+
+        // GUI: player_titles_view
+        guiPlayerTitlesViewTitle = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.player_titles_view.title", "&3Your Titles"));
+        guiPlayerTitlesViewItemNamePrefix = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.player_titles_view.item_name_prefix", "&f")); // Default is just white color code
+        guiPlayerTitlesViewItemLoreBase = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.base"));
+        guiPlayerTitlesViewItemLoreStatusLine = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.status_line"));
+        guiPlayerTitlesViewItemLoreAdminLine = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.admin_line"));
+        guiPlayerTitlesViewItemLoreDateLine = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.date_line"));
+        guiPlayerTitlesViewItemLoreEquipInstruction = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.equip_instruction"));
+        guiPlayerTitlesViewItemLoreNotApprovedInstruction = translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.not_approved_instruction"));
+        
+        // GUI: admin_requests_view
+        guiAdminRequestsViewTitle = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.admin_requests_view.title", "&3Title Requests"));
+        guiAdminRequestsViewNoRequestsItemName = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.admin_requests_view.no_requests_item.name", "&cNo Active Requests"));
+        guiAdminRequestsViewNoRequestsItemLore = translateStringList(plugin.getConfig().getStringList("gui.admin_requests_view.no_requests_item.lore"));
+        guiAdminRequestsViewRequestItemNamePrefix = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("gui.admin_requests_view.request_item.name_prefix", "&bTitle: &f"));
+        guiAdminRequestsViewRequestItemLore = translateStringList(plugin.getConfig().getStringList("gui.admin_requests_view.request_item.lore"));
+
+        // Commands: tokens
+        cmdTokensUsage = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("commands.tokens.usage", "&eUsage: /tokens give <player> <amount>"));
+        cmdTokensAmountPositive = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("commands.tokens.amount_positive", "&cAmount must be a positive integer."));
+        cmdTokensInvalidAmount = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("commands.tokens.invalid_amount", "&cInvalid amount specified."));
+        cmdTokensUnknownSubcommand = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("commands.tokens.unknown_subcommand", "&cUnknown sub-command. Usage: /tokens give <player> <amount>"));
+
+        // Title Properties
+        titleMinLength = plugin.getConfig().getInt("title_properties.min_length", 3);
+        titleMaxLength = plugin.getConfig().getInt("title_properties.max_length", 30);
+        titleStatusApprovedText = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("title_properties.status_approved_text", "&aApproved"));
+        titleStatusRejectedText = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("title_properties.status_rejected_text", "&cRejected"));
+        titleStatusPendingText = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("title_properties.status_pending_text", "&ePending Review"));
     }
 
     private void setupFiles() {
@@ -117,14 +220,6 @@ public class DataManager {
             pendingTitlesConfig.save(pendingTitlesFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save pending titles: " + e.getMessage());
-        }
-    }
-
-    public void savePlayerTitles() {
-        try {
-            playerTitlesConfig.save(playerTitlesFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save player titles: " + e.getMessage());
         }
     }
     
@@ -200,7 +295,8 @@ public class DataManager {
                         String title = (String) titleData.get("title");
                         String status = (String) titleData.get("status");
                         String approvalDate = (String) titleData.get("approvalDate");
-                        String adminApproverName = (String) titleData.get("adminApproverName", ""); // Default if missing for old data
+                        Object adminApproverNameObj = titleData.get("adminApproverName");
+                        String adminApproverName = (adminApproverNameObj != null) ? (String) adminApproverNameObj : "";
                         titlesForPlayer.add(new PlayerTitle(playerUUID, playerName, title, status, approvalDate, adminApproverName));
                     }
                 }
@@ -278,8 +374,7 @@ public class DataManager {
     }
 
     // Rewritten savePlayerTitles
-    @Override
-    public void savePlayerTitles() {
+    public void savePlayerTitles() { // Removed @Override
         // Clear the existing "players" section before saving to avoid orphaned data
         playerTitlesConfig.set("players", null); 
 
@@ -364,4 +459,70 @@ public class DataManager {
         SimpleDateFormat formatter = new SimpleDateFormat(this.timeFormat);
         return formatter.format(new Date(timestamp));
     }
+
+    // Helper method to translate color codes in a list of strings
+    private List<String> translateStringList(List<String> list) {
+        if (list == null || list.isEmpty()) { // Return empty if null or source list is empty
+            return new ArrayList<>();
+        }
+        List<String> translatedList = new ArrayList<>();
+        for (String s : list) {
+            translatedList.add(ChatColor.translateAlternateColorCodes('&', s));
+        }
+        return translatedList;
+    }
+
+    // Getter methods for all new fields will be added below this line in the next step.
+    // For brevity, not listing all getters here again, but they will be implemented.
+
+    // Getters for General Messages
+    public String getMsgPlayerOnlyCommand() { return msgPlayerOnlyCommand; }
+    public String getMsgPermissionDenied() { return msgPermissionDenied; }
+    public String getMsgTitleInputPrompt() { return msgTitleInputPrompt; }
+    public String getMsgTitleInputTooShort() { return msgTitleInputTooShort; }
+    public String getMsgTitleInputTooLong() { return msgTitleInputTooLong; }
+    public String getMsgTitleInputCancelled() { return msgTitleInputCancelled; }
+    public String getMsgTitleEquipped() { return msgTitleEquipped; }
+    public String getMsgErrorGeneric() { return msgErrorGeneric; }
+    public String getMsgAdminRequestStale() { return msgAdminRequestStale; }
+    public String getMsgAdminTitleApprovedFeedback() { return msgAdminTitleApprovedFeedback; }
+    public String getMsgAdminTitleRejectedFeedback() { return msgAdminTitleRejectedFeedback; }
+
+    // Getters for GUI: main_menu
+    public String getGuiMainMenuTitle() { return guiMainMenuTitle; }
+    public String getGuiMainMenuItemRequestName() { return guiMainMenuItemRequestName; }
+    public List<String> getGuiMainMenuItemRequestLore() { return guiMainMenuItemRequestLore; }
+    public String getGuiMainMenuItemRequestNoTokensLore() { return guiMainMenuItemRequestNoTokensLore; }
+    public String getGuiMainMenuItemViewOwnedName() { return guiMainMenuItemViewOwnedName; }
+    public List<String> getGuiMainMenuItemViewOwnedLore() { return guiMainMenuItemViewOwnedLore; }
+
+    // Getters for GUI: player_titles_view
+    public String getGuiPlayerTitlesViewTitle() { return guiPlayerTitlesViewTitle; }
+    public String getGuiPlayerTitlesViewItemNamePrefix() { return guiPlayerTitlesViewItemNamePrefix; }
+    public List<String> getGuiPlayerTitlesViewItemLoreBase() { return guiPlayerTitlesViewItemLoreBase; }
+    public List<String> getGuiPlayerTitlesViewItemLoreStatusLine() { return guiPlayerTitlesViewItemLoreStatusLine; }
+    public List<String> getGuiPlayerTitlesViewItemLoreAdminLine() { return guiPlayerTitlesViewItemLoreAdminLine; }
+    public List<String> getGuiPlayerTitlesViewItemLoreDateLine() { return guiPlayerTitlesViewItemLoreDateLine; }
+    public List<String> getGuiPlayerTitlesViewItemLoreEquipInstruction() { return guiPlayerTitlesViewItemLoreEquipInstruction; }
+    public List<String> getGuiPlayerTitlesViewItemLoreNotApprovedInstruction() { return guiPlayerTitlesViewItemLoreNotApprovedInstruction; }
+
+    // Getters for GUI: admin_requests_view
+    public String getGuiAdminRequestsViewTitle() { return guiAdminRequestsViewTitle; }
+    public String getGuiAdminRequestsViewNoRequestsItemName() { return guiAdminRequestsViewNoRequestsItemName; }
+    public List<String> getGuiAdminRequestsViewNoRequestsItemLore() { return guiAdminRequestsViewNoRequestsItemLore; }
+    public String getGuiAdminRequestsViewRequestItemNamePrefix() { return guiAdminRequestsViewRequestItemNamePrefix; }
+    public List<String> getGuiAdminRequestsViewRequestItemLore() { return guiAdminRequestsViewRequestItemLore; }
+    
+    // Getters for Commands: tokens
+    public String getCmdTokensUsage() { return cmdTokensUsage; }
+    public String getCmdTokensAmountPositive() { return cmdTokensAmountPositive; }
+    public String getCmdTokensInvalidAmount() { return cmdTokensInvalidAmount; }
+    public String getCmdTokensUnknownSubcommand() { return cmdTokensUnknownSubcommand; }
+
+    // Getters for Title Properties
+    public int getTitleMinLength() { return titleMinLength; }
+    public int getTitleMaxLength() { return titleMaxLength; }
+    public String getTitleStatusApprovedText() { return titleStatusApprovedText; }
+    public String getTitleStatusRejectedText() { return titleStatusRejectedText; }
+    public String getTitleStatusPendingText() { return titleStatusPendingText; }
 }

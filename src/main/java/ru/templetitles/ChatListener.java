@@ -4,7 +4,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.ChatColor; // Added import
+// Removed ChatColor import as DataManager provides translated strings
 
 public class ChatListener implements Listener {
     private final TempleTitles plugin; // plugin field might not be used, but good for consistency
@@ -26,22 +26,25 @@ public class ChatListener implements Listener {
 
             // Basic validation (e.g., length, allowed characters - can be expanded)
             // This part can be kept or removed based on whether validation is desired here or elsewhere
-            if (titleName.length() < 3 || titleName.length() > 30) {
-                player.sendMessage(ChatColor.RED + "Title must be between 3 and 30 characters.");
-                // Note: Player is still in input mode. They can try again or type 'cancel'.
-                // Or, call titleInputManager.stopTitleInput(player); if it's a one-shot.
-                // For this implementation, let's assume they need to type a valid title or 'cancel'.
-                // If 'cancel' functionality is desired, it should be explicitly handled:
-                if (titleName.equalsIgnoreCase("cancel")) {
-                    titleInputManager.stopTitleInput(player);
-                    player.sendMessage(ChatColor.YELLOW + "Title request cancelled.");
-                    // Refund token if it was already deducted. In this flow, token is deducted *before* input.
-                    // The current task description deducts token in GUIListener *before* starting input.
-                    // So if they cancel here, the token is already spent.
-                    // To make 'cancel' refund a token, token deduction should happen *after* successful title input.
-                    // For now, sticking to the provided flow: token is spent once input mode starts.
-                }
+            if (titleName.equalsIgnoreCase("cancel")) { // Handle "cancel" first
+                titleInputManager.stopTitleInput(player);
+                player.sendMessage(dataManager.getMsgTitleInputCancelled()); // Use DataManager
+                // Token was already deducted in GUIListener, no refund logic here based on current flow.
+                return;
+            }
+
+            int minLength = dataManager.getTitleMinLength();
+            int maxLength = dataManager.getTitleMaxLength();
+
+            if (titleName.length() < minLength) {
+                player.sendMessage(dataManager.getMsgTitleInputTooShort().replace("%min_length%", String.valueOf(minLength))); // Use DataManager
+                // Player remains in input mode to try again or type 'cancel'
                 return; 
+            }
+            if (titleName.length() > maxLength) {
+                player.sendMessage(dataManager.getMsgTitleInputTooLong().replace("%max_length%", String.valueOf(maxLength))); // Use DataManager
+                // Player remains in input mode to try again or type 'cancel'
+                return;
             }
             
             titleInputManager.stopTitleInput(player); // Stop input mode
@@ -49,11 +52,10 @@ public class ChatListener implements Listener {
             TitleRequest request = new TitleRequest(player.getUniqueId(), player.getName(), titleName, System.currentTimeMillis());
             dataManager.addPendingRequest(request);
             
-            String message = dataManager.getMsgRequestSubmitted().replace("%title%", titleName);
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+            player.sendMessage(dataManager.getMsgRequestSubmitted().replace("%title%", titleName)); // Use DataManager (already translated)
             
             // Optional: Admin notification logic can be added here if desired.
-            // Example: Bukkit.broadcast(ChatColor.AQUA + "New title request: " + titleName + " by " + player.getName(), "templetitles.admin.notify");
+            // Example: Bukkit.broadcast(dataManager.getMsgAdminNewRequestNotification().replace(...), "templetitles.admin.notify");
         }
     }
 }

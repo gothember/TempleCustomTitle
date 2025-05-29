@@ -1,7 +1,7 @@
 package ru.templetitles;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+// Removed ChatColor import as DataManager provides translated strings
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -19,7 +19,7 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
     private PlayerTitlesViewGUI() {}
 
     public static void openPlayerTitlesView(Player player, List<PlayerTitle> titles, DataManager dataManager, TempleTitles plugin) {
-        Inventory gui = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + "Your Titles"); // 6 rows * 9 slots = 54
+        Inventory gui = Bukkit.createInventory(null, 54, dataManager.getGuiPlayerTitlesViewTitle()); // Use DataManager
 
         for (int i = 0; i < titles.size(); i++) {
             if (i >= 54) break; // Stop if inventory is full
@@ -29,23 +29,55 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
             ItemMeta itemMeta = titleItem.getItemMeta();
 
             if (itemMeta != null) {
-                itemMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&f" + titleEntry.getTitle()));
+                itemMeta.setDisplayName(dataManager.getGuiPlayerTitlesViewItemNamePrefix() + titleEntry.getTitle()); // Use DataManager
 
-                List<String> lore = new ArrayList<>();
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&7Ваш титул")); // "Your title"
-                lore.add("");
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&7Название титула: &f" + titleEntry.getTitle()));
-                // Assuming approvalDate is already formatted. If not, formatting would be needed here.
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&7Одобрен: &e" + titleEntry.getApprovalDate()));
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&7Статус: &a" + titleEntry.getStatus())); // Assuming status is user-friendly
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&7Одобрен администратором: &6" + titleEntry.getAdminApproverName()));
-                lore.add("");
-                if ("одобрен".equalsIgnoreCase(titleEntry.getStatus())) {
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&6ЛКМ - экипировать титул"));
-                } else {
-                    lore.add(ChatColor.translateAlternateColorCodes('&', "&cТитул не одобрен"));
+                List<String> processedLore = new ArrayList<>();
+                String statusText;
+                String titleStatus = titleEntry.getStatus(); // Assuming status is already in a comparable format (e.g. "одобрен")
+                                
+                // Determine status text from DataManager based on the title's status field
+                if (dataManager.getTitleStatusApprovedText().contains(titleStatus) || "одобрен".equalsIgnoreCase(titleStatus)) { // Example check
+                    statusText = dataManager.getTitleStatusApprovedText();
+                } else if (dataManager.getTitleStatusRejectedText().contains(titleStatus) || "отклонен".equalsIgnoreCase(titleStatus)) {
+                    statusText = dataManager.getTitleStatusRejectedText();
+                } else { // Default to pending or a generic status if not explicitly matched
+                    statusText = dataManager.getTitleStatusPendingText(); 
                 }
-                itemMeta.setLore(lore);
+
+                // Base Lore
+                for (String line : dataManager.getGuiPlayerTitlesViewItemLoreBase()) {
+                    processedLore.add(line
+                        .replace("%titul_name%", titleEntry.getTitle())
+                        // No other common placeholders typically in base, but can be added
+                    );
+                }
+                
+                // Status Line
+                for (String line : dataManager.getGuiPlayerTitlesViewItemLoreStatusLine()) {
+                    processedLore.add(line.replace("%status%", statusText));
+                }
+
+                // Admin Approver Line (only if admin approver name exists)
+                if (titleEntry.getAdminApproverName() != null && !titleEntry.getAdminApproverName().isEmpty()) {
+                    for (String line : dataManager.getGuiPlayerTitlesViewItemLoreAdminLine()) {
+                        processedLore.add(line.replace("%admin_name%", titleEntry.getAdminApproverName()));
+                    }
+                }
+                
+                // Approval Date Line (only if approval date exists)
+                if (titleEntry.getApprovalDate() != null && !titleEntry.getApprovalDate().isEmpty()) {
+                    for (String line : dataManager.getGuiPlayerTitlesViewItemLoreDateLine()) {
+                        processedLore.add(line.replace("%date%", titleEntry.getApprovalDate()));
+                    }
+                }
+
+                // Instructions based on status
+                if ("одобрен".equalsIgnoreCase(titleStatus)) { // Using the raw status for logic here
+                    processedLore.addAll(dataManager.getGuiPlayerTitlesViewItemLoreEquipInstruction());
+                } else {
+                    processedLore.addAll(dataManager.getGuiPlayerTitlesViewItemLoreNotApprovedInstruction());
+                }
+                itemMeta.setLore(processedLore);
 
                 // Store the raw title name in PersistentDataContainer
                 NamespacedKey namespacedKey = new NamespacedKey(plugin, "title_name");

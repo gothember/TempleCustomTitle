@@ -7,10 +7,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta; // Added
-import org.bukkit.persistence.PersistentDataType; // Added
-import org.bukkit.ChatColor; // Added
-import org.bukkit.NamespacedKey; // Added
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+// Removed ChatColor import as DataManager provides translated strings
+import org.bukkit.NamespacedKey;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,21 +32,27 @@ public class GUIListener implements Listener {
         Player player = (Player) event.getWhoClicked();
         String viewTitle = event.getView().getTitle();
 
-        if (viewTitle.equals(ChatColor.DARK_PURPLE + "Custom Title Options")) {
+        // Compare with titles from DataManager
+        if (viewTitle.equals(dataManager.getGuiMainMenuTitle())) {
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
 
-            int slot = event.getRawSlot();
+            // Assuming item names are also from DataManager for robustness, though not strictly required by task for click logic
+            // String requestItemName = dataManager.getGuiMainMenuItemRequestName();
+            // String viewOwnedItemName = dataManager.getGuiMainMenuItemViewOwnedName();
 
+            // Logic based on slot as before, assuming fixed layout
+            int slot = event.getRawSlot();
             if (slot == 22 && clickedItem.getType() == Material.PAPER) { // Request New Title
-                if (dataManager.getPlayerTokens(player.getUniqueId()) >= 1) {
-                    dataManager.removePlayerTokens(player.getUniqueId(), 1);
+                int requiredTokens = dataManager.getTitleRequestCost();
+                if (dataManager.getPlayerTokens(player.getUniqueId()) >= requiredTokens) {
+                    dataManager.removePlayerTokens(player.getUniqueId(), requiredTokens);
                     player.closeInventory();
                     titleInputManager.startTitleInput(player);
-                    player.sendMessage(ChatColor.GREEN + "Please type your desired title in chat.");
+                    player.sendMessage(dataManager.getMsgTitleInputPrompt()); // Use DataManager
                 } else {
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', dataManager.getMsgInsufficientTokens()));
+                    player.sendMessage(dataManager.getMsgInsufficientTokens().replace("%required_tokens%", String.valueOf(requiredTokens))); // Use DataManager
                     player.closeInventory();
                 }
             } else if (slot == 20 && clickedItem.getType() == Material.BOOK) { // View Titles
@@ -54,7 +60,7 @@ public class GUIListener implements Listener {
                 PlayerTitlesViewGUI.openPlayerTitlesView(player, playerTitles, dataManager, plugin);
             }
 
-        } else if (viewTitle.equals(ChatColor.DARK_AQUA + "Your Titles")) {
+        } else if (viewTitle.equals(dataManager.getGuiPlayerTitlesViewTitle())) { // Use DataManager
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() != Material.PAPER) return;
@@ -74,26 +80,28 @@ public class GUIListener implements Listener {
                 }
 
                 if (foundTitle != null) {
-                    if ("одобрен".equalsIgnoreCase(foundTitle.getStatus())) {
-                        String command = String.format("lp user %s meta setsuffix %d \"%s\"", 
-                                                       player.getName(), 
-                                                       dataManager.getLuckpermsSuffixPriority(), 
+                    // Using raw status "одобрен" for logic, but display status comes from getTitleStatusApprovedText()
+                    if ("одобрен".equalsIgnoreCase(foundTitle.getStatus())) { 
+                        String command = String.format("lp user %s meta setsuffix %d \"%s\"",
+                                                       player.getName(),
+                                                       dataManager.getLuckpermsSuffixPriority(),
                                                        foundTitle.getTitle());
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                        player.sendMessage(ChatColor.GREEN + "Title equipped!");
+                        player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", foundTitle.getTitle())); // Use DataManager
                         player.closeInventory();
                     } else {
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', dataManager.getMsgTitleNotApproved()));
+                        // Replace %title% placeholder in the message
+                        player.sendMessage(dataManager.getMsgTitleNotApproved().replace("%title%", foundTitle.getTitle())); // Use DataManager
                         player.closeInventory();
                     }
                 } else {
-                    player.sendMessage(ChatColor.RED + "Error: Could not find title data."); // Should not happen
+                    player.sendMessage(dataManager.getMsgErrorGeneric()); // Use DataManager
                     player.closeInventory();
                 }
             }
-        } else if (viewTitle.equals(ChatColor.DARK_AQUA + "Title Requests")) { // Admin GUI for title requests
+        } else if (viewTitle.equals(dataManager.getGuiAdminRequestsViewTitle())) { // Use DataManager
             event.setCancelled(true);
-            Player admin = (Player) event.getWhoClicked(); // Admin is the one clicking
+            Player admin = (Player) event.getWhoClicked();
             ItemStack clickedItem = event.getCurrentItem();
 
             if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
@@ -105,7 +113,7 @@ public class GUIListener implements Listener {
             PersistentDataContainer container = meta.getPersistentDataContainer();
 
             if (!container.has(titleKey, PersistentDataType.STRING) || !container.has(uuidKey, PersistentDataType.STRING)) {
-                return; // Not a valid request item
+                return;
             }
             String titleName = container.get(titleKey, PersistentDataType.STRING);
             UUID requesterUUID = UUID.fromString(container.get(uuidKey, PersistentDataType.STRING));
@@ -115,33 +123,39 @@ public class GUIListener implements Listener {
                 .findFirst().orElse(null);
 
             if (originalRequest == null) {
-                admin.sendMessage(ChatColor.RED + "This request seems to be outdated or already processed.");
-                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin); // Refresh
+                admin.sendMessage(dataManager.getMsgAdminRequestStale()); // Use DataManager
+                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
                 return;
             }
             String requesterName = originalRequest.getPlayerName();
+            // Using raw status "одобрен" for PlayerTitle internal status field
+            String approvedStatus = "одобрен"; 
 
             if (event.getClick() == org.bukkit.event.inventory.ClickType.RIGHT) { // Approve
-                PlayerTitle newPlayerTitle = new PlayerTitle(requesterUUID, requesterName, titleName, "одобрен", dataManager.getCurrentFormattedDate(), admin.getName());
+                PlayerTitle newPlayerTitle = new PlayerTitle(requesterUUID, requesterName, titleName, approvedStatus, dataManager.getCurrentFormattedDate(), admin.getName());
                 dataManager.addPlayerTitle(newPlayerTitle);
                 dataManager.removePendingRequest(requesterUUID, titleName);
-                admin.sendMessage(ChatColor.GREEN + "Title '" + titleName + "' approved for " + requesterName);
+                admin.sendMessage(dataManager.getMsgAdminTitleApprovedFeedback() // Use DataManager
+                                  .replace("%title%", titleName)
+                                  .replace("%player%", requesterName));
 
                 Player requesterOnline = Bukkit.getPlayer(requesterUUID);
                 if (requesterOnline != null) {
-                    requesterOnline.sendMessage(ChatColor.translateAlternateColorCodes('&', dataManager.getMsgTitleApproved().replace("%title%", titleName)));
+                    requesterOnline.sendMessage(dataManager.getMsgTitleApproved().replace("%title%", titleName)); // Use DataManager
                 }
-                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin); // Refresh GUI
+                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
 
             } else if (event.getClick() == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT) { // Reject
                 dataManager.removePendingRequest(requesterUUID, titleName);
-                admin.sendMessage(ChatColor.RED + "Title '" + titleName + "' rejected for " + requesterName);
+                admin.sendMessage(dataManager.getMsgAdminTitleRejectedFeedback() // Use DataManager
+                                  .replace("%title%", titleName)
+                                  .replace("%player%", requesterName));
 
                 Player requesterOnline = Bukkit.getPlayer(requesterUUID);
                 if (requesterOnline != null) {
-                    requesterOnline.sendMessage(ChatColor.translateAlternateColorCodes('&', dataManager.getMsgTitleRejected().replace("%title%", titleName)));
+                    requesterOnline.sendMessage(dataManager.getMsgTitleRejected().replace("%title%", titleName)); // Use DataManager
                 }
-                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin); // Refresh GUI
+                AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
             }
         }
     }

@@ -8,36 +8,38 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Material;
-import org.bukkit.Bukkit; // Added import
-import org.bukkit.ChatColor; // Added import
-import java.util.Arrays; // Added import
+import org.bukkit.Bukkit;
+// Removed ChatColor import as DataManager provides translated strings
+import java.util.ArrayList; // Added for lore processing
+import java.util.List; // Added for lore processing
+// Removed Arrays import as it might not be needed if lore is processed differently
 
 public class CustomTitulCommand implements CommandExecutor {
     private final TempleTitles plugin;
-    // DataManager is not directly used here anymore, but plugin instance is kept for potential future use
-    // or if other methods in this class needed it.
+    private final DataManager dataManager; // Added DataManager instance
 
     public CustomTitulCommand(TempleTitles plugin) {
         this.plugin = plugin;
-        // this.dataManager = plugin.getDataManager(); // Not strictly needed for this command's direct logic now
+        this.dataManager = plugin.getDataManager(); // Initialize DataManager
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "This command is only for players.");
+            sender.sendMessage(dataManager.getMsgPlayerOnlyCommand()); // Use DataManager
             return true;
         }
 
         Player player = (Player) sender;
         
-        Inventory gui = Bukkit.createInventory(null, 45, ChatColor.DARK_PURPLE + "Custom Title Options");
+        Inventory gui = Bukkit.createInventory(null, 45, dataManager.getGuiMainMenuTitle()); // Use DataManager
 
         // Slot 20: View Your Titles
         ItemStack viewTitlesItem = new ItemStack(Material.BOOK);
         ItemMeta viewTitlesMeta = viewTitlesItem.getItemMeta();
         if (viewTitlesMeta != null) {
-            viewTitlesMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aView Your Titles"));
+            viewTitlesMeta.setDisplayName(dataManager.getGuiMainMenuItemViewOwnedName()); // Use DataManager
+            viewTitlesMeta.setLore(dataManager.getGuiMainMenuItemViewOwnedLore()); // Use DataManager (already translated List<String>)
             viewTitlesItem.setItemMeta(viewTitlesMeta);
         }
         gui.setItem(20, viewTitlesItem);
@@ -46,8 +48,22 @@ public class CustomTitulCommand implements CommandExecutor {
         ItemStack requestTitleItem = new ItemStack(Material.PAPER);
         ItemMeta requestTitleMeta = requestTitleItem.getItemMeta();
         if (requestTitleMeta != null) {
-            requestTitleMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&bRequest a New Title"));
-            requestTitleMeta.setLore(Arrays.asList(ChatColor.translateAlternateColorCodes('&', "&7Cost: 1 Token")));
+            requestTitleMeta.setDisplayName(dataManager.getGuiMainMenuItemRequestName()); // Use DataManager
+            
+            List<String> requestLore = new ArrayList<>();
+            String costString = String.valueOf(dataManager.getTitleRequestCost());
+            for (String line : dataManager.getGuiMainMenuItemRequestLore()) {
+                requestLore.add(line.replace("%cost%", costString));
+            }
+            // Check if player has enough tokens and append specific lore line if needed
+            // This logic is better placed in GUIListener or when GUI is opened,
+            // but if config has specific "no_tokens_lore" for the main item itself:
+            if (dataManager.getPlayerTokens(player.getUniqueId()) < dataManager.getTitleRequestCost()) {
+                 if (dataManager.getGuiMainMenuItemRequestNoTokensLore() != null && !dataManager.getGuiMainMenuItemRequestNoTokensLore().isEmpty()){
+                    requestLore.add(dataManager.getGuiMainMenuItemRequestNoTokensLore());
+                 }
+            }
+            requestTitleMeta.setLore(requestLore);
             requestTitleItem.setItemMeta(requestTitleMeta);
         }
         gui.setItem(22, requestTitleItem);

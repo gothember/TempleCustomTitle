@@ -1,7 +1,7 @@
 package ru.templetitles;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+// Removed ChatColor import as DataManager provides translated strings
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -27,16 +27,14 @@ public class AdminTitleGUI { // No longer implements InventoryHolder
     // public static final String LORE_PLAYER_UUID_PREFIX = "§7UUID: §c";
 
     public static void openAdminRequestsView(Player admin, List<TitleRequest> requests, DataManager dataManager, TempleTitles plugin) {
-        Inventory inventory = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + "Title Requests");
+        Inventory inventory = Bukkit.createInventory(null, 54, dataManager.getGuiAdminRequestsViewTitle()); // Use DataManager
 
         if (requests.isEmpty()) {
             ItemStack noRequestsItem = new ItemStack(Material.BARRIER);
             ItemMeta meta = noRequestsItem.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.RED + "No Active Requests");
-                List<String> lore = new ArrayList<>();
-                lore.add(ChatColor.GRAY + "There are currently no pending title requests.");
-                meta.setLore(lore);
+                meta.setDisplayName(dataManager.getGuiAdminRequestsViewNoRequestsItemName()); // Use DataManager
+                meta.setLore(dataManager.getGuiAdminRequestsViewNoRequestsItemLore()); // Use DataManager
                 noRequestsItem.setItemMeta(meta);
             }
             inventory.setItem(22, noRequestsItem); // Center if possible
@@ -49,15 +47,17 @@ public class AdminTitleGUI { // No longer implements InventoryHolder
                 ItemMeta meta = item.getItemMeta();
 
                 if (meta != null) {
-                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&bTitle: &f" + req.getTitle()));
+                    meta.setDisplayName(dataManager.getGuiAdminRequestsViewRequestItemNamePrefix() + req.getTitle()); // Use DataManager
 
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.GRAY + "Requester: " + ChatColor.WHITE + req.getPlayerName());
-                    lore.add(ChatColor.GRAY + "Submitted: " + ChatColor.WHITE + dataManager.formatTimestamp(req.getSubmissionTimestamp()));
-                    lore.add("");
-                    lore.add(ChatColor.GREEN + "Right-Click to Approve");
-                    lore.add(ChatColor.RED + "Shift + Right-Click to Reject");
-                    meta.setLore(lore);
+                    List<String> processedLore = new ArrayList<>();
+                    for (String line : dataManager.getGuiAdminRequestsViewRequestItemLore()) { // Use DataManager
+                        processedLore.add(line
+                            .replace("%player_name%", req.getPlayerName())
+                            .replace("%submission_date%", dataManager.formatTimestamp(req.getSubmissionTimestamp()))
+                            .replace("%title_name%", req.getTitle()) // Added %title_name% placeholder
+                        );
+                    }
+                    meta.setLore(processedLore);
 
                     // PersistentDataContainer (PDC)
                     NamespacedKey titleKey = new NamespacedKey(plugin, "title_name");

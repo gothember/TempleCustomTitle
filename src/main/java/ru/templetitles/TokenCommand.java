@@ -1,7 +1,7 @@
 package ru.templetitles;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+// Removed ChatColor import as DataManager provides translated strings
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -20,18 +20,18 @@ public class TokenCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("templetitles.tokens.give")) {
-            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command."); // Standard Bukkit message can also be used via plugin.yml
+            sender.sendMessage(dataManager.getMsgPermissionDenied()); // Use DataManager
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.YELLOW + "Usage: /tokens give <player> <amount>");
+            sender.sendMessage(dataManager.getCmdTokensUsage()); // Use DataManager
             return true;
         }
         
         if (args[0].equalsIgnoreCase("give")) {
             if (args.length != 3) {
-                sender.sendMessage(ChatColor.YELLOW + "Usage: /tokens give <player> <amount>");
+                sender.sendMessage(dataManager.getCmdTokensUsage()); // Use DataManager
                 return true;
             }
 
@@ -40,38 +40,39 @@ public class TokenCommand implements CommandExecutor {
             try {
                 amount = Integer.parseInt(args[2]);
                 if (amount <= 0) {
-                    sender.sendMessage(ChatColor.RED + "Amount must be a positive integer.");
+                    sender.sendMessage(dataManager.getCmdTokensAmountPositive()); // Use DataManager
                     return true;
                 }
             } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "Invalid amount specified.");
+                sender.sendMessage(dataManager.getCmdTokensInvalidAmount()); // Use DataManager
                 return true;
             }
 
             OfflinePlayer targetOfflinePlayer = Bukkit.getOfflinePlayer(playerName);
-            if (targetOfflinePlayer == null || (!targetOfflinePlayer.hasPlayedBefore() && !targetOfflinePlayer.isOnline())) {
-                 // dataManager.getMsgPlayerNotFound() might need Bukkit.getPlayerUniqueId(playerName) if it expects UUID
-                 // For simplicity, let's use a direct message here or assume getMsgPlayerNotFound can take a string.
-                String message = dataManager.getMsgPlayerNotFound().replace("%player%", playerName);
-                sender.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+            // Using targetOfflinePlayer.getName() for %player% placeholder as it's more reliable for correct casing
+            // and works even if player is offline (Bukkit.getOfflinePlayer(name) might return a player object with the exact name given).
+            // However, if the player has never played before, getName() might be null.
+            // A more robust way is to use args[1] (playerName) for the message if targetOfflinePlayer.getName() is null.
+            String displayPlayerName = targetOfflinePlayer.getName() != null ? targetOfflinePlayer.getName() : playerName;
+
+            if (!targetOfflinePlayer.hasPlayedBefore() && !targetOfflinePlayer.isOnline()) { // Check if player exists
+                sender.sendMessage(dataManager.getMsgPlayerNotFound().replace("%player%", displayPlayerName)); // Use DataManager
                 return true;
             }
-
+            
             dataManager.addPlayerTokens(targetOfflinePlayer.getUniqueId(), amount);
             
-            String sentMessage = dataManager.getMsgTokensSent()
+            sender.sendMessage(dataManager.getMsgTokensSent() // Use DataManager
                                     .replace("%amount%", String.valueOf(amount))
-                                    .replace("%player%", targetOfflinePlayer.getName()); // Use targetOfflinePlayer.getName() to get correct capitalization
-            sender.sendMessage(ChatColor.translateAlternateColorCodes('&', sentMessage));
+                                    .replace("%player%", displayPlayerName));
 
             if (targetOfflinePlayer.isOnline()) {
                 Player targetOnlinePlayer = (Player) targetOfflinePlayer;
-                String receivedMessage = dataManager.getMsgTokensReceived().replace("%amount%", String.valueOf(amount));
-                targetOnlinePlayer.sendMessage(ChatColor.translateAlternateColorCodes('&', receivedMessage));
+                targetOnlinePlayer.sendMessage(dataManager.getMsgTokensReceived().replace("%amount%", String.valueOf(amount))); // Use DataManager
             }
             return true;
         } else {
-            sender.sendMessage(ChatColor.YELLOW + "Unknown sub-command. Usage: /tokens give <player> <amount>");
+            sender.sendMessage(dataManager.getCmdTokensUnknownSubcommand()); // Use DataManager
             return true;
         }
     }

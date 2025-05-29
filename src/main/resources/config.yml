@@ -1,21 +1,171 @@
-# TempleTitles Plugin Configuration
+#--------------------------------------------------#
+#         TempleTitles Plugin Configuration        #
+#--------------------------------------------------#
 
+#--------------------------------------------------#
+# Messages & Text                                  #
+#--------------------------------------------------#
+# This section contains all user-facing messages.
+# Most messages support color codes using '&'.
+# Placeholders like %player%, %title%, %amount% are replaced dynamically.
 messages:
+  # Date and time format used throughout the plugin (e.g., for approval dates, submission timestamps).
+  # Java SimpleDateFormat: https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html
   time_format: "dd.MM.yyyy HH:mm"
-  title_not_approved: "&cYour title is not yet approved."
-  insufficient_tokens: "&cYou do not have enough tokens."
-  tokens_received: "&aYou have received %amount% tokens."
-  tokens_sent: "&aYou have sent %amount% tokens to %player%."
-  player_not_found: "&cPlayer %player% not found."
-  request_submitted: "&aYour title request for '%title%' has been submitted."
+
+  # Messages related to title status and interaction
+  title_not_approved: "&cYour title '%title%' is not yet approved or has been rejected."
+  request_submitted: "&aYour title request for '%title%' has been submitted for review."
   title_approved_player: "&aYour title '%title%' has been approved!"
   title_rejected_player: "&cYour title '%title%' has been rejected."
-  # You can add more messages here as needed
 
+  # Messages related to the token economy
+  # %required_tokens% - used in insufficient_tokens message
+  insufficient_tokens: "&cYou do not have enough tokens. Required: %required_tokens%."
+  # %amount% - the number of tokens
+  tokens_received: "&aYou have received %amount% tokens."
+  # %amount% - the number of tokens, %player% - the recipient's name
+  tokens_sent: "&aYou have sent %amount% tokens to %player%."
+
+  # General feedback messages
+  # %player% - player name that was not found
+  player_not_found: "&cPlayer %player% not found."
+
+  # Sub-section for newer, more general messages
+  general:
+    player_only_command: "&cThis command can only be run by a player."
+    permission_denied: "&cYou do not have permission to use this command."
+    # Message shown to player when they need to type their desired title in chat
+    title_input_prompt: "&aPlease type your desired title in chat. Type 'cancel' to abort."
+    # %min_length% - minimum allowed title length
+    title_input_too_short: "&cTitle must be at least %min_length% characters."
+    # %max_length% - maximum allowed title length
+    title_input_too_long: "&cTitle must be at most %max_length% characters."
+    title_input_cancelled: "&eTitle request cancelled."
+    # %title% - the title being equipped
+    title_equipped: "&aTitle '%title%' equipped!"
+    error_generic: "&cAn unexpected error occurred. Please contact an administrator."
+    # Message for admins if they try to act on an already processed request in GUI
+    admin_request_stale: "&cThis request seems to be outdated or already processed."
+    # Feedback for admins after approving/rejecting a title. Placeholders: %title%, %player%
+    admin_title_approved_feedback: "&aTitle '%title%' approved for player %player%."
+    admin_title_rejected_feedback: "&cTitle '%title%' rejected for player %player%."
+
+#--------------------------------------------------#
+# LuckPerms Integration Settings                   #
+#--------------------------------------------------#
 luckperms:
-  suffix_priority: 1
+  # Priority for the suffix set by this plugin. Higher numbers usually mean higher priority.
+  # Consult LuckPerms documentation for how priorities work in your specific setup.
+  suffix_priority: 100
 
-# Token cost is 1, handled in code directly as per user specification.
-# If it needs to be configurable later, add:
-# economy:
-#   title_request_cost: 1
+#--------------------------------------------------#
+# Title Properties & Rules                         #
+#--------------------------------------------------#
+title_properties:
+  min_length: 3
+  max_length: 30
+  # Display text for different title statuses in GUIs or messages.
+  status_approved_text: "&aApproved"
+  status_rejected_text: "&cRejected"
+  status_pending_text: "&ePending Review"
+  # The cost in tokens to request a new custom title.
+  request_cost: 1
+
+#--------------------------------------------------#
+# GUI (Graphical User Interface) Configurations    #
+#--------------------------------------------------#
+gui:
+  # Configuration for the main player menu, accessed via /customtitul
+  main_menu:
+    title: "&5Custom Title Options"
+    items:
+      # Item for requesting a new title
+      request_title:
+        name: "&bRequest a New Title"
+        # Lore for this item.
+        # %cost% will be replaced by the value of title_properties.request_cost
+        lore:
+          - "&7Click to request a new custom title."
+          - "&7Cost: %cost% Token(s)"
+        # Special lore line added if the player doesn't have enough tokens (defined by title_properties.request_cost).
+        no_tokens_lore: "&cYou do not have enough tokens for this!"
+      # Item for viewing owned titles
+      view_owned:
+        name: "&aView Your Titles"
+        lore:
+          - "&7Click to view and manage your titles."
+
+  # Configuration for the GUI where players view their list of owned titles
+  player_titles_view:
+    title: "&3Your Titles"
+    # This prefix is added before the actual title string for the item's display name.
+    # Example: If prefix is "&f", an item for title "Cool" will be named "&fCool".
+    item_name_prefix: "&f"
+    # Lore configuration for each title item displayed in this GUI.
+    # These are lists of strings; each string is a line of lore.
+    # Available placeholders for all lore lines below:
+    #   %titul_name% - The name of the title.
+    #   %status% - The formatted status text (e.g., from title_properties.status_approved_text).
+    #   %admin_name% - The name of the admin who approved the title (if applicable).
+    #   %date% - The date of approval (formatted according to messages.time_format).
+    item_lore:
+      # Base lore - appears on every title item, typically at the top.
+      base:
+        - "&7&m------------------------"
+        - "&7Title: %titul_name%" # Example of using placeholder in base
+      # Status line - shows the current status of the title.
+      status_line:
+        - "&7Status: %status%"
+      # Admin approver line - shows who approved the title. Only appears if an admin name is recorded.
+      admin_line:
+        - "&7Approved by: &6%admin_name%"
+      # Approval date line - shows when the title was approved. Only appears if an approval date is recorded.
+      date_line:
+        - "&7Approved on: &e%date%"
+      # Instruction on how to equip an approved title.
+      equip_instruction:
+        - "&7&m------------------------"
+        - "&6Left-Click to equip this title."
+      # Message shown if the title is not in a state where it can be equipped.
+      not_approved_instruction:
+        - "&7&m------------------------"
+        - "&cThis title cannot be equipped."
+
+  # Configuration for the admin GUI where they view and manage pending title requests (/customtituls)
+  admin_requests_view:
+    title: "&3Title Requests"
+    # Item displayed if there are no pending requests.
+    no_requests_item:
+      name: "&cNo Active Requests"
+      lore:
+        - "&7There are currently no pending title requests."
+    # Configuration for items representing each pending title request.
+    request_item:
+      # This prefix is added before the actual title string for the item's display name.
+      name_prefix: "&bTitle: &f"
+      # Lore for each pending request item.
+      # Available placeholders:
+      #   %player_name% - Name of the player who requested the title.
+      #   %submission_date% - Date and time the request was submitted (formatted).
+      #   %title_name% - The requested title name.
+      lore:
+        - "&7Requester: &e%player_name%"
+        - "&7Submitted: &e%submission_date%"
+        - "&7Title: &f%title_name%"
+        - ""
+        - "&aRight-Click to Approve"
+        - "&cShift + Right-Click to Reject"
+
+#--------------------------------------------------#
+# Command Specific Messages                        #
+#--------------------------------------------------#
+commands:
+  # Messages for the /tokens command
+  tokens:
+    usage: "&eUsage: /tokens give <player> <amount>"
+    amount_positive: "&cAmount must be a positive integer."
+    invalid_amount: "&cInvalid amount specified."
+    unknown_subcommand: "&cUnknown sub-command. Usage: /tokens give <player> <amount>"
+  # Usage messages for /customtitul and /customtituls can be added here if their
+  # current simple behavior (no arguments needed for basic GUI opening) changes.
