@@ -36,7 +36,8 @@ messages:
     player_only_command: "&cThis command can only be run by a player."
     permission_denied: "&cYou do not have permission to use this command."
     # Message shown to player when they need to type their desired title in chat
-    title_input_prompt: "&aPlease type your desired title in chat. Type 'cancel' to abort."
+    # Hint: Default keywords are 'cancel', 'отмена', 'отменить', 'quit', 'exit'
+    title_input_prompt: "&aPlease type your desired title in chat. (To cancel, type e.g., 'cancel' or 'отмена')"
     # %min_length% - minimum allowed title length
     title_input_too_short: "&cTitle must be at least %min_length% characters."
     # %max_length% - maximum allowed title length
@@ -71,6 +72,13 @@ title_properties:
   status_pending_text: "&ePending Review"
   # The cost in tokens to request a new custom title.
   title_request_cost: 1 # Changed from request_cost to title_request_cost
+  # Keywords (case-insensitive) that a player can type in chat to cancel title input mode.
+  cancel_keywords:
+    - "cancel"
+    - "отмена"
+    - "отменить"
+    - "quit"
+    - "exit"
 
 #--------------------------------------------------#
 # GUI (Graphical User Interface) Configurations    #

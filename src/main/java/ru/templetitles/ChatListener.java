@@ -4,7 +4,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-// Removed ChatColor import as DataManager provides translated strings
+import java.util.List; // Added for List
 
 public class ChatListener implements Listener {
     private final TempleTitles plugin; // plugin field might not be used, but good for consistency
@@ -26,11 +26,15 @@ public class ChatListener implements Listener {
 
             // Basic validation (e.g., length, allowed characters - can be expanded)
             // This part can be kept or removed based on whether validation is desired here or elsewhere
-            if (titleName.equalsIgnoreCase("cancel")) { // Handle "cancel" first
+            
+            String lowerCaseMessage = titleName.toLowerCase().trim();
+            List<String> cancelKeywords = dataManager.getTitleInputCancelKeywords();
+
+            if (cancelKeywords.contains(lowerCaseMessage)) {
                 titleInputManager.stopTitleInput(player);
-                player.sendMessage(dataManager.getMsgTitleInputCancelled()); // Use DataManager
+                player.sendMessage(dataManager.getMsgTitleInputCancelled()); // Message from config
                 // Token was already deducted in GUIListener, no refund logic here based on current flow.
-                return;
+                return; // Important to return after handling cancellation
             }
 
             int minLength = dataManager.getTitleMinLength();

@@ -14,12 +14,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Arrays; // Added for Arrays.asList
 // java.io.File is already imported above
-import org.bukkit.ChatColor; // Needed for the old translateStringList, will be removed if Util is used. Or keep if used elsewhere.
+import org.bukkit.ChatColor; 
 // For Util class:
-// import ru.templetitles.Util; // This will be used.
-import org.bukkit.inventory.ItemStack; // Added
-import org.bukkit.Material; // Added
+// import ru.templetitles.Util; 
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
 import org.bukkit.inventory.meta.ItemMeta; // Added
 import org.bukkit.configuration.ConfigurationSection; // Added
 
@@ -56,7 +57,7 @@ public class DataManager {
     private String guiMainMenuItemRequestNoTokensLore; // Special lore line if not enough tokens
     private String guiMainMenuItemViewOwnedName;
     private List<String> guiMainMenuItemViewOwnedLore;
-    private Map<Integer, ItemStack> guiMainMenuDecorations; // New field
+    private Map<Integer, DecorationItemConfig> guiMainMenuDecorations; // Changed type
 
     // GUI: player_titles_view
     private String guiPlayerTitlesViewTitle;
@@ -87,7 +88,8 @@ public class DataManager {
     private String titleStatusApprovedText; // Text for "одобрен" status in GUIs
     private String titleStatusRejectedText; // Text for "отклонен" status
     private String titleStatusPendingText;  // Text for "на рассмотрении" status
-    private int titleRequestCost; // New: Cost in tokens to request a title
+    private int titleRequestCost; 
+    private List<String> titleInputCancelKeywords; // New field
 
     private File pendingTitlesFile;
     private FileConfiguration pendingTitlesConfig;
@@ -187,7 +189,9 @@ public class DataManager {
                         // itemMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES); // Optional: to hide attributes
                         itemStack.setItemMeta(itemMeta);
                     }
-                    guiMainMenuDecorations.put(slot, itemStack);
+                    List<String> commandList = decoSection.getStringList(slotKey + ".commands");
+                    DecorationItemConfig decoConfig = new DecorationItemConfig(itemStack, commandList);
+                    guiMainMenuDecorations.put(slot, decoConfig);
                 } catch (NumberFormatException e) {
                     plugin.getLogger().warning("[TempleTitles] Invalid slot key '" + slotKey + "' (must be an integer) in gui.main_menu.decorations. Skipping.");
                 }
@@ -224,6 +228,21 @@ public class DataManager {
         titleStatusRejectedText = Util.translateColors(plugin.getConfig().getString("title_properties.status_rejected_text", "&cRejected"));
         titleStatusPendingText = Util.translateColors(plugin.getConfig().getString("title_properties.status_pending_text", "&ePending Review"));
         titleRequestCost = plugin.getConfig().getInt("title_properties.title_request_cost", 1);
+        
+        // Load Title Input Cancel Keywords
+        List<String> rawCancelKeywords = plugin.getConfig().getStringList("title_properties.cancel_keywords");
+        if (rawCancelKeywords == null || rawCancelKeywords.isEmpty()) {
+            rawCancelKeywords = new ArrayList<>(Arrays.asList("cancel", "отмена", "отменить", "quit", "exit"));
+        }
+        this.titleInputCancelKeywords = new ArrayList<>();
+        for (String keyword : rawCancelKeywords) {
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                this.titleInputCancelKeywords.add(keyword.toLowerCase().trim());
+            }
+        }
+        if (this.titleInputCancelKeywords.isEmpty()) { // Failsafe
+            this.titleInputCancelKeywords.add("cancel");
+        }
     }
 
     private void setupFiles() {
@@ -529,6 +548,20 @@ public class DataManager {
     // Getter methods for all new fields will be added below this line in the next step.
     // For brevity, not listing all getters here again, but they will be implemented.
 
+    // Inner class for Decoration Item Configuration
+    public static class DecorationItemConfig {
+        public final ItemStack itemStack;
+        public final List<String> commands;
+
+        public DecorationItemConfig(ItemStack itemStack, List<String> commands) {
+            this.itemStack = itemStack;
+            this.commands = (commands != null) ? commands : new ArrayList<>();
+        }
+
+        public ItemStack getItemStack() { return itemStack; }
+        public List<String> getCommands() { return commands; }
+    }
+
     // Getters for General Messages
     public String getMsgPlayerOnlyCommand() { return msgPlayerOnlyCommand; }
     public String getMsgPermissionDenied() { return msgPermissionDenied; }
@@ -549,7 +582,7 @@ public class DataManager {
     public String getGuiMainMenuItemRequestNoTokensLore() { return guiMainMenuItemRequestNoTokensLore; }
     public String getGuiMainMenuItemViewOwnedName() { return guiMainMenuItemViewOwnedName; }
     public List<String> getGuiMainMenuItemViewOwnedLore() { return guiMainMenuItemViewOwnedLore; }
-    public Map<Integer, ItemStack> getGuiMainMenuDecorations() { return guiMainMenuDecorations; } // New getter
+    public Map<Integer, DecorationItemConfig> getGuiMainMenuDecorations() { return guiMainMenuDecorations; } // Changed return type
 
     // Getters for GUI: player_titles_view
     public String getGuiPlayerTitlesViewTitle() { return guiPlayerTitlesViewTitle; }
@@ -581,4 +614,5 @@ public class DataManager {
     public String getTitleStatusRejectedText() { return titleStatusRejectedText; }
     public String getTitleStatusPendingText() { return titleStatusPendingText; }
     public int getTitleRequestCost() { return titleRequestCost; }
+    public List<String> getTitleInputCancelKeywords() { return titleInputCancelKeywords; } // New getter
 }

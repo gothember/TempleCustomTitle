@@ -13,6 +13,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.NamespacedKey;
 
 import java.util.List;
+import java.util.Map; // Added for Map
 import java.util.UUID;
 
 public class GUIListener implements Listener {
@@ -42,11 +43,26 @@ public class GUIListener implements Listener {
             int clickedSlot = event.getSlot(); // Use getSlot() for raw slot index
 
             // Check if the clicked slot is a decoration slot and not a functional slot
-            if (dataManager.getGuiMainMenuDecorations() != null &&
-                dataManager.getGuiMainMenuDecorations().containsKey(clickedSlot) &&
-                clickedSlot != 20 && clickedSlot != 22) { // Functional slots
-                // It's a decoration item, already cancelled, so just return to do nothing.
-                return;
+            Map<Integer, DataManager.DecorationItemConfig> decorations = dataManager.getGuiMainMenuDecorations();
+            if (decorations != null && decorations.containsKey(clickedSlot)) {
+                // Ensure it's not a functional slot that might accidentally be in decoration range
+                if (clickedSlot == 20 || clickedSlot == 22) { 
+                    // This is a functional slot, let subsequent logic handle it.
+                } else {
+                    DataManager.DecorationItemConfig decoConfig = decorations.get(clickedSlot);
+                    if (decoConfig != null && decoConfig.getCommands() != null && !decoConfig.getCommands().isEmpty()) {
+                        for (String command : decoConfig.getCommands()) {
+                            String processedCommand = command.replace("%player_name%", player.getName())
+                                                             .replace("%player_uuid%", player.getUniqueId().toString());
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), processedCommand);
+                        }
+                        // player.closeInventory(); // Optional: GUI stays open by default
+                        return; // Command executed, no further action for this click
+                    }
+                    // If decoConfig exists but has no commands, it remains purely decorative.
+                    // The click is already cancelled by the general GUI handling.
+                    return; // Explicitly return to signify decorative item was handled.
+                }
             }
 
             // Assuming item names are also from DataManager for robustness, though not strictly required by task for click logic
@@ -97,11 +113,12 @@ public class GUIListener implements Listener {
                     String translatedTitleForDisplayAndCommand = Util.translateColors(rawTitle);
 
                     // Using raw status "одобрен" for logic, but display status comes from getTitleStatusApprovedText()
-                    if ("одобрен".equalsIgnoreCase(foundTitle.getStatus())) { 
+                    if ("одобрен".equalsIgnoreCase(foundTitle.getStatus())) {
+                        String titleWithLeadingSpace = " " + translatedTitleForDisplayAndCommand; // Add leading space
                         String command = String.format("lp user %s meta setsuffix %d \"%s\"",
                                                        player.getName(),
                                                        dataManager.getLuckpermsSuffixPriority(),
-                                                       translatedTitleForDisplayAndCommand); // Use translated title
+                                                       titleWithLeadingSpace); // Use title with leading space
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                         player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", translatedTitleForDisplayAndCommand)); 
                         player.closeInventory();

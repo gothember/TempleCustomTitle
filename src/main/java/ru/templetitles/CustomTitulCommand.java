@@ -69,14 +69,19 @@ public class CustomTitulCommand implements CommandExecutor {
         gui.setItem(22, requestTitleItem);
 
         // Add decorations
-        Map<Integer, ItemStack> decorations = dataManager.getGuiMainMenuDecorations();
+        Map<Integer, DataManager.DecorationItemConfig> decorations = dataManager.getGuiMainMenuDecorations();
         if (decorations != null) {
-            for (Map.Entry<Integer, ItemStack> entry : decorations.entrySet()) {
+            for (Map.Entry<Integer, DataManager.DecorationItemConfig> entry : decorations.entrySet()) {
                 int slot = entry.getKey();
-                // Ensure decorations don't overwrite functional items (slots 20 and 22)
-                // Also check if slot is within GUI bounds (though DataManager should already validate this)
-                if (slot >= 0 && slot < gui.getSize() && gui.getItem(slot) == null) { 
-                    gui.setItem(slot, entry.getValue().clone()); // Use clone to prevent issues if the same ItemStack object is used elsewhere
+                DataManager.DecorationItemConfig decoConfig = entry.getValue();
+                
+                // Ensure decoConfig and its ItemStack are not null before setting
+                if (decoConfig != null && decoConfig.getItemStack() != null) {
+                    // Ensure decorations don't overwrite functional items (slots 20 and 22)
+                    // Also check if slot is within GUI bounds (DataManager also validates this range during load for 0-44)
+                    if (slot >= 0 && slot < gui.getSize() && gui.getItem(slot) == null) { 
+                        gui.setItem(slot, decoConfig.getItemStack().clone()); // Use clone and correct variable 'gui'
+                    }
                 }
             }
         }
