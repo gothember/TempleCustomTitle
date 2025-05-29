@@ -3,10 +3,11 @@ package ru.templetitles;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent; // Using Async
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.ChatColor; // Added import
 
 public class ChatListener implements Listener {
-    private final TempleTitles plugin;
+    private final TempleTitles plugin; // plugin field might not be used, but good for consistency
     private final DataManager dataManager;
     private final TitleInputManager titleInputManager;
 
@@ -19,34 +20,40 @@ public class ChatListener implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        if (titleInputManager.isPlayerWaiting(player.getUniqueId())) {
+        if (titleInputManager.isPlayerInInputMode(player)) { // Using isPlayerInInputMode
             event.setCancelled(true);
-            String requestedTitle = event.getMessage();
+            String titleName = event.getMessage(); // Renamed for clarity as per instructions
 
             // Basic validation (e.g., length, allowed characters - can be expanded)
-            if (requestedTitle.length() < 3 || requestedTitle.length() > 30) {
-                player.sendMessage("§cНазвание титула должно быть от 3 до 30 символов.");
-                // Optionally, don't remove from waiting, let them try again, or add a try limit.
-                // titleInputManager.removePlayerWaiting(player.getUniqueId()); // Remove if one try only
+            // This part can be kept or removed based on whether validation is desired here or elsewhere
+            if (titleName.length() < 3 || titleName.length() > 30) {
+                player.sendMessage(ChatColor.RED + "Title must be between 3 and 30 characters.");
+                // Note: Player is still in input mode. They can try again or type 'cancel'.
+                // Or, call titleInputManager.stopTitleInput(player); if it's a one-shot.
+                // For this implementation, let's assume they need to type a valid title or 'cancel'.
+                // If 'cancel' functionality is desired, it should be explicitly handled:
+                if (titleName.equalsIgnoreCase("cancel")) {
+                    titleInputManager.stopTitleInput(player);
+                    player.sendMessage(ChatColor.YELLOW + "Title request cancelled.");
+                    // Refund token if it was already deducted. In this flow, token is deducted *before* input.
+                    // The current task description deducts token in GUIListener *before* starting input.
+                    // So if they cancel here, the token is already spent.
+                    // To make 'cancel' refund a token, token deduction should happen *after* successful title input.
+                    // For now, sticking to the provided flow: token is spent once input mode starts.
+                }
                 return; 
             }
+            
+            titleInputManager.stopTitleInput(player); // Stop input mode
 
-            // Deduct token
-            boolean deductionSuccess = dataManager.removePlayerTokens(player.getUniqueId(), 1);
-
-            if (!deductionSuccess) {
-                player.sendMessage("§cПроизошла ошибка при списании жетона. Заявка не была создана. Пожалуйста, попробуйте еще раз.");
-                // Also ensure they are not stuck in a waiting state if token deduction fails right after passing GUI check
-                titleInputManager.removePlayerWaiting(player.getUniqueId());
-                return; // Stop processing if token deduction failed
-            } else {
-                // Original logic (to be executed if token deduction is successful):
-                TitleRequest newRequest = new TitleRequest(player.getUniqueId(), player.getName(), requestedTitle);
-                dataManager.addPendingRequest(newRequest);
-                
-                player.sendMessage("§aВаша заявка на титул '" + requestedTitle + "' подана на рассмотрение. 1 жетон был списан.");
-                titleInputManager.removePlayerWaiting(player.getUniqueId());
-            }
+            TitleRequest request = new TitleRequest(player.getUniqueId(), player.getName(), titleName, System.currentTimeMillis());
+            dataManager.addPendingRequest(request);
+            
+            String message = dataManager.getMsgRequestSubmitted().replace("%title%", titleName);
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+            
+            // Optional: Admin notification logic can be added here if desired.
+            // Example: Bukkit.broadcast(ChatColor.AQUA + "New title request: " + titleName + " by " + player.getName(), "templetitles.admin.notify");
         }
     }
 }

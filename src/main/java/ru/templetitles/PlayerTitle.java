@@ -8,13 +8,15 @@ public class PlayerTitle {
     private final String title;
     private final String status; // e.g., "одобрен"
     private final String approvalDate; // Formatted date string
+    private final String adminApproverName;
 
-    public PlayerTitle(UUID playerUUID, String playerName, String title, String status, String approvalDate) {
+    public PlayerTitle(UUID playerUUID, String playerName, String title, String status, String approvalDate, String adminApproverName) {
         this.playerUUID = playerUUID;
         this.playerName = playerName;
         this.title = title;
         this.status = status;
         this.approvalDate = approvalDate;
+        this.adminApproverName = adminApproverName; // New
     }
 
     public UUID getPlayerUUID() {
@@ -35,5 +37,9 @@ public class PlayerTitle {
 
     public String getApprovalDate() {
         return approvalDate;
+    }
+
+    public String getAdminApproverName() {
+        return adminApproverName;
     }
 }

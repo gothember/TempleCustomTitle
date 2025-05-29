@@ -1,0 +1,21 @@
+# TempleTitles Plugin Configuration
+
+messages:
+  time_format: "dd.MM.yyyy HH:mm"
+  title_not_approved: "&cYour title is not yet approved."
+  insufficient_tokens: "&cYou do not have enough tokens."
+  tokens_received: "&aYou have received %amount% tokens."
+  tokens_sent: "&aYou have sent %amount% tokens to %player%."
+  player_not_found: "&cPlayer %player% not found."
+  request_submitted: "&aYour title request for '%title%' has been submitted."
+  title_approved_player: "&aYour title '%title%' has been approved!"
+  title_rejected_player: "&cYour title '%title%' has been rejected."
+  # You can add more messages here as needed
+
+luckperms:
+  suffix_priority: 1
+
+# Token cost is 1, handled in code directly as per user specification.
+# If it needs to be configurable later, add:
+# economy:
+#   title_request_cost: 1

@@ -1,21 +1,22 @@
 package ru.templetitles;
 
+import org.bukkit.entity.Player; // Added import
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 public class TitleInputManager {
-    private final Set<UUID> playersWaitingForTitleInput = new HashSet<>();
+    private final Set<UUID> playersInInputMode = new HashSet<>(); // Renamed and matches task
 
-    public void addPlayerWaiting(UUID uuid) {
-        playersWaitingForTitleInput.add(uuid);
+    public void startTitleInput(Player player) { // Method signature updated
+        playersInInputMode.add(player.getUniqueId());
     }
 
-    public void removePlayerWaiting(UUID uuid) {
-        playersWaitingForTitleInput.remove(uuid);
+    public void stopTitleInput(Player player) { // Method signature updated
+        playersInInputMode.remove(player.getUniqueId());
     }
 
-    public boolean isPlayerWaiting(UUID uuid) {
-        return playersWaitingForTitleInput.contains(uuid);
+    public boolean isPlayerInInputMode(Player player) { // Method signature updated
+        return playersInInputMode.contains(player.getUniqueId());
     }
 }

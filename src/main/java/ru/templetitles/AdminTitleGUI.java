@@ -1,52 +1,75 @@
 package ru.templetitles;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-// import org.bukkit.inventory.meta.ItemMeta; // No longer directly needed
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+
 import java.util.ArrayList;
 import java.util.List;
+// UUID import is not strictly necessary here if not used directly, but good for context
+// import java.util.UUID; 
 
-public class AdminTitleGUI implements InventoryHolder {
-    private final Inventory inventory;
-    private final TempleTitles plugin;
-    private final DataManager dataManager;
+public class AdminTitleGUI { // No longer implements InventoryHolder
 
-    // Standardized prefixes for reliable parsing
-    public static final String LORE_PLAYER_NAME_PREFIX = "§7Заявка от: §f";
-    public static final String LORE_TITLE_PREFIX = "§7Титул: §f";
-    public static final String LORE_PLAYER_UUID_PREFIX = "§7UUID: §c"; // Clean prefix for UUID
+    // Private constructor to prevent instantiation if it's a utility class
+    private AdminTitleGUI() {}
 
-    public AdminTitleGUI(TempleTitles plugin) {
-        this.plugin = plugin;
-        this.dataManager = plugin.getDataManager();
-        this.inventory = Bukkit.createInventory(this, 54, "Админ: Заявки на титулы"); // 6 rows
-        initializeItems();
-    }
+    // Constants for lore prefixes are removed as PDC is used now.
+    // Old constants for reference (if needed for migration or other parts of code):
+    // public static final String LORE_PLAYER_NAME_PREFIX = "§7Заявка от: §f";
+    // public static final String LORE_TITLE_PREFIX = "§7Титул: §f";
+    // public static final String LORE_PLAYER_UUID_PREFIX = "§7UUID: §c";
 
-    private void initializeItems() {
-        List<TitleRequest> pendingRequests = dataManager.getPendingRequests();
-        int slot = 0;
-        for (TitleRequest request : pendingRequests) {
-            if (slot >= 54) break;
+    public static void openAdminRequestsView(Player admin, List<TitleRequest> requests, DataManager dataManager, TempleTitles plugin) {
+        Inventory inventory = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + "Title Requests");
 
-            List<String> lore = new ArrayList<>();
-            lore.add("§bНовая заявка на кастомный титул");
-            lore.add(PLAYER_NAME_PREFIX + request.getPlayerName());
-            lore.add(TITLE_NAME_PREFIX + request.getTitle());
-            lore.add(PLAYER_UUID_PREFIX + request.getPlayerUUID().toString()); // Store UUID
-            lore.add("");
-            lore.add("§aЛКМ - Принять заявку");
-            lore.add("§cПКМ - Отклонить заявку");
+        if (requests.isEmpty()) {
+            ItemStack noRequestsItem = new ItemStack(Material.BARRIER);
+            ItemMeta meta = noRequestsItem.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.RED + "No Active Requests");
+                List<String> lore = new ArrayList<>();
+                lore.add(ChatColor.GRAY + "There are currently no pending title requests.");
+                meta.setLore(lore);
+                noRequestsItem.setItemMeta(meta);
+            }
+            inventory.setItem(22, noRequestsItem); // Center if possible
+        } else {
+            for (int i = 0; i < requests.size(); i++) {
+                if (i >= 54) break; // Stop if inventory is full
 
-            inventory.setItem(slot++, Util.createGuiItem(Material.PAPER, "§eЗаявка: " + request.getTitle(), lore));
+                TitleRequest req = requests.get(i);
+                ItemStack item = new ItemStack(Material.PAPER);
+                ItemMeta meta = item.getItemMeta();
+
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&bTitle: &f" + req.getTitle()));
+
+                    List<String> lore = new ArrayList<>();
+                    lore.add(ChatColor.GRAY + "Requester: " + ChatColor.WHITE + req.getPlayerName());
+                    lore.add(ChatColor.GRAY + "Submitted: " + ChatColor.WHITE + dataManager.formatTimestamp(req.getSubmissionTimestamp()));
+                    lore.add("");
+                    lore.add(ChatColor.GREEN + "Right-Click to Approve");
+                    lore.add(ChatColor.RED + "Shift + Right-Click to Reject");
+                    meta.setLore(lore);
+
+                    // PersistentDataContainer (PDC)
+                    NamespacedKey titleKey = new NamespacedKey(plugin, "title_name");
+                    NamespacedKey uuidKey = new NamespacedKey(plugin, "requester_uuid");
+                    meta.getPersistentDataContainer().set(titleKey, PersistentDataType.STRING, req.getTitle());
+                    meta.getPersistentDataContainer().set(uuidKey, PersistentDataType.STRING, req.getPlayerUUID().toString());
+                    
+                    item.setItemMeta(meta);
+                    inventory.setItem(i, item); // Add item to the GUI
+                }
+            }
         }
-    }
-
-    @Override
-    public Inventory getInventory() {
-        return inventory;
+        admin.openInventory(inventory);
     }
 }

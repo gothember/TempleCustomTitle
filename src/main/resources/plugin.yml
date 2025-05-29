@@ -12,8 +12,13 @@ commands:
     permission-message: You do not have permission to use this command.
   customtituls:
     description: Allows administrators to manage custom title requests.
-    usage: /customtituls [give <игрок> <количество>]
+    usage: /customtituls # Removed [give <игрок> <количество>]
     permission: templetitles.admin
+    permission-message: You do not have permission to use this command.
+  tokens:
+    description: Allows administrators to give tokens to players.
+    usage: /tokens give <player> <amount>
+    permission: templetitles.tokens.give
     permission-message: You do not have permission to use this command.
 permissions:
   templetitles.use:
@@ -21,4 +26,7 @@ permissions:
     default: true
   templetitles.admin:
     description: Allows use of the /customtituls command for managing title requests.
+    default: op
+  templetitles.tokens.give: # New permission
+    description: Allows giving tokens to players.
     default: op

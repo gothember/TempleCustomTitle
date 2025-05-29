@@ -25,12 +25,15 @@ public final class TempleTitles extends JavaPlugin {
             }
         }
         
-        dataManager = new DataManager(this);
+        saveDefaultConfig(); // Copies config.yml if not present
+        dataManager = new DataManager(this); // DataManager loads the config
         titleInputManager = new TitleInputManager();
 
         // Register commands
         this.getCommand("customtitul").setExecutor(new CustomTitulCommand(this));
         this.getCommand("customtituls").setExecutor(new CustomTitulsAdminCommand(this));
+        TokenCommand tokenCommand = new TokenCommand(this, dataManager); // New
+        this.getCommand("tokens").setExecutor(tokenCommand); // New
         getLogger().info("Commands registered.");
 
         // Register event listeners
