@@ -29,7 +29,10 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
             ItemMeta itemMeta = titleItem.getItemMeta();
 
             if (itemMeta != null) {
-                itemMeta.setDisplayName(dataManager.getGuiPlayerTitlesViewItemNamePrefix() + titleEntry.getTitle()); // Use DataManager
+                // Translate the player-defined title name for display
+                String rawPlayerTitle = titleEntry.getTitle();
+                String translatedPlayerTitleForDisplay = Util.translateColors(dataManager.getGuiPlayerTitlesViewItemNamePrefix() + rawPlayerTitle);
+                itemMeta.setDisplayName(translatedPlayerTitleForDisplay);
 
                 List<String> processedLore = new ArrayList<>();
                 String statusText;
@@ -45,9 +48,11 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
                 }
 
                 // Base Lore
+                // Translate player title for lore placeholder replacement
+                String translatedPlayerTitleForLore = Util.translateColors(rawPlayerTitle); 
                 for (String line : dataManager.getGuiPlayerTitlesViewItemLoreBase()) {
                     processedLore.add(line
-                        .replace("%titul_name%", titleEntry.getTitle())
+                        .replace("%titul_name%", translatedPlayerTitleForLore)
                         // No other common placeholders typically in base, but can be added
                     );
                 }

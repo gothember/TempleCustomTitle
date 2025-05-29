@@ -47,14 +47,19 @@ public class AdminTitleGUI { // No longer implements InventoryHolder
                 ItemMeta meta = item.getItemMeta();
 
                 if (meta != null) {
-                    meta.setDisplayName(dataManager.getGuiAdminRequestsViewRequestItemNamePrefix() + req.getTitle()); // Use DataManager
+                    String rawRequestTitle = req.getTitle();
+                    // Translate the player-defined title for display name
+                    String translatedRequestTitleForDisplay = Util.translateColors(dataManager.getGuiAdminRequestsViewRequestItemNamePrefix() + rawRequestTitle);
+                    meta.setDisplayName(translatedRequestTitleForDisplay);
 
                     List<String> processedLore = new ArrayList<>();
+                    // Translate player-defined title for lore placeholder
+                    String translatedRequestTitleForLore = Util.translateColors(rawRequestTitle);
                     for (String line : dataManager.getGuiAdminRequestsViewRequestItemLore()) { // Use DataManager
                         processedLore.add(line
                             .replace("%player_name%", req.getPlayerName())
                             .replace("%submission_date%", dataManager.formatTimestamp(req.getSubmissionTimestamp()))
-                            .replace("%title_name%", req.getTitle()) // Added %title_name% placeholder
+                            .replace("%title_name%", translatedRequestTitleForLore) 
                         );
                     }
                     meta.setLore(processedLore);

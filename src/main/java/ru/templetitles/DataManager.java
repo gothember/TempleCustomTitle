@@ -124,14 +124,16 @@ public class DataManager {
         // or if the config could have been changed externally.
         plugin.reloadConfig(); 
 
-        timeFormat = plugin.getConfig().getString("messages.time_format", "dd.MM.yyyy HH:mm");
-        luckpermsSuffixPriority = plugin.getConfig().getInt("luckperms.suffix_priority", 1);
-        msgTitleNotApproved = plugin.getConfig().getString("messages.title_not_approved", "&cYour title is not yet approved.");
-        msgInsufficientTokens = plugin.getConfig().getString("messages.insufficient_tokens", "&cYou do not have enough tokens.");
-        msgTokensReceived = plugin.getConfig().getString("messages.tokens_received", "&aYou have received %amount% tokens.");
-        msgTokensSent = plugin.getConfig().getString("messages.tokens_sent", "&aYou have sent %amount% tokens to %player%.");
-        msgPlayerNotFound = plugin.getConfig().getString("messages.player_not_found", "&cPlayer %player% not found.");
-        msgRequestSubmitted = plugin.getConfig().getString("messages.request_submitted", "&aYour title request for '%title%' has been submitted.");
+        timeFormat = plugin.getConfig().getString("messages.time_format", "dd.MM.yyyy HH:mm"); // Not a colored message
+        luckpermsSuffixPriority = plugin.getConfig().getInt("luckperms.suffix_priority", 1); // Not a colored message
+
+        // Translate all user-facing messages, including older ones
+        msgTitleNotApproved = Util.translateColors(plugin.getConfig().getString("messages.title_not_approved", "&cYour title '%title%' is not yet approved or has been rejected."));
+        msgInsufficientTokens = Util.translateColors(plugin.getConfig().getString("messages.insufficient_tokens", "&cYou do not have enough tokens. Required: %required_tokens%."));
+        msgTokensReceived = Util.translateColors(plugin.getConfig().getString("messages.tokens_received", "&aYou have received %amount% tokens."));
+        msgTokensSent = Util.translateColors(plugin.getConfig().getString("messages.tokens_sent", "&aYou have sent %amount% tokens to %player%."));
+        msgPlayerNotFound = Util.translateColors(plugin.getConfig().getString("messages.player_not_found", "&cPlayer %player% not found."));
+        msgRequestSubmitted = Util.translateColors(plugin.getConfig().getString("messages.request_submitted", "&aYour title request for '%title%' has been submitted for review."));
         msgTitleApproved = Util.translateColors(plugin.getConfig().getString("messages.title_approved_player", "&aYour title '%title%' has been approved!"));
         msgTitleRejected = Util.translateColors(plugin.getConfig().getString("messages.title_rejected_player", "&cYour title '%title%' has been rejected."));
 

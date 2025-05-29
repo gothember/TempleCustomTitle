@@ -92,18 +92,22 @@ public class GUIListener implements Listener {
                 }
 
                 if (foundTitle != null) {
+                    String rawTitle = foundTitle.getTitle();
+                    // Translate title for messages and command
+                    String translatedTitleForDisplayAndCommand = Util.translateColors(rawTitle);
+
                     // Using raw status "одобрен" for logic, but display status comes from getTitleStatusApprovedText()
                     if ("одобрен".equalsIgnoreCase(foundTitle.getStatus())) { 
                         String command = String.format("lp user %s meta setsuffix %d \"%s\"",
                                                        player.getName(),
                                                        dataManager.getLuckpermsSuffixPriority(),
-                                                       foundTitle.getTitle());
+                                                       translatedTitleForDisplayAndCommand); // Use translated title
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                        player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", foundTitle.getTitle())); // Use DataManager
+                        player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", translatedTitleForDisplayAndCommand)); 
                         player.closeInventory();
                     } else {
                         // Replace %title% placeholder in the message
-                        player.sendMessage(dataManager.getMsgTitleNotApproved().replace("%title%", foundTitle.getTitle())); // Use DataManager
+                        player.sendMessage(dataManager.getMsgTitleNotApproved().replace("%title%", translatedTitleForDisplayAndCommand)); 
                         player.closeInventory();
                     }
                 } else {
@@ -127,11 +131,11 @@ public class GUIListener implements Listener {
             if (!container.has(titleKey, PersistentDataType.STRING) || !container.has(uuidKey, PersistentDataType.STRING)) {
                 return;
             }
-            String titleName = container.get(titleKey, PersistentDataType.STRING);
+            String rawTitleNameFromPDC = container.get(titleKey, PersistentDataType.STRING); // Renamed for clarity
             UUID requesterUUID = UUID.fromString(container.get(uuidKey, PersistentDataType.STRING));
 
             TitleRequest originalRequest = dataManager.getPendingRequests().stream()
-                .filter(r -> r.getPlayerUUID().equals(requesterUUID) && r.getTitle().equals(titleName))
+                .filter(r -> r.getPlayerUUID().equals(requesterUUID) && r.getTitle().equals(rawTitleNameFromPDC)) // Compare with raw title from PDC
                 .findFirst().orElse(null);
 
             if (originalRequest == null) {
@@ -142,30 +146,34 @@ public class GUIListener implements Listener {
             String requesterName = originalRequest.getPlayerName();
             // Using raw status "одобрен" for PlayerTitle internal status field
             String approvedStatus = "одобрен"; 
+            String rawTitleForLogic = originalRequest.getTitle(); // Use the title from the request object
+
+            // Translate title for messages
+            String translatedTitleForMessage = Util.translateColors(rawTitleForLogic);
 
             if (event.getClick() == org.bukkit.event.inventory.ClickType.RIGHT) { // Approve
-                PlayerTitle newPlayerTitle = new PlayerTitle(requesterUUID, requesterName, titleName, approvedStatus, dataManager.getCurrentFormattedDate(), admin.getName());
+                PlayerTitle newPlayerTitle = new PlayerTitle(requesterUUID, requesterName, rawTitleForLogic, approvedStatus, dataManager.getCurrentFormattedDate(), admin.getName());
                 dataManager.addPlayerTitle(newPlayerTitle);
-                dataManager.removePendingRequest(requesterUUID, titleName);
-                admin.sendMessage(dataManager.getMsgAdminTitleApprovedFeedback() // Use DataManager
-                                  .replace("%title%", titleName)
+                dataManager.removePendingRequest(requesterUUID, rawTitleForLogic);
+                admin.sendMessage(dataManager.getMsgAdminTitleApprovedFeedback() 
+                                  .replace("%title%", translatedTitleForMessage)
                                   .replace("%player%", requesterName));
 
                 Player requesterOnline = Bukkit.getPlayer(requesterUUID);
                 if (requesterOnline != null) {
-                    requesterOnline.sendMessage(dataManager.getMsgTitleApproved().replace("%title%", titleName)); // Use DataManager
+                    requesterOnline.sendMessage(dataManager.getMsgTitleApproved().replace("%title%", translatedTitleForMessage)); 
                 }
                 AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
 
             } else if (event.getClick() == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT) { // Reject
-                dataManager.removePendingRequest(requesterUUID, titleName);
-                admin.sendMessage(dataManager.getMsgAdminTitleRejectedFeedback() // Use DataManager
-                                  .replace("%title%", titleName)
+                dataManager.removePendingRequest(requesterUUID, rawTitleForLogic);
+                admin.sendMessage(dataManager.getMsgAdminTitleRejectedFeedback() 
+                                  .replace("%title%", translatedTitleForMessage)
                                   .replace("%player%", requesterName));
 
                 Player requesterOnline = Bukkit.getPlayer(requesterUUID);
                 if (requesterOnline != null) {
-                    requesterOnline.sendMessage(dataManager.getMsgTitleRejected().replace("%title%", titleName)); // Use DataManager
+                    requesterOnline.sendMessage(dataManager.getMsgTitleRejected().replace("%title%", translatedTitleForMessage));
                 }
                 AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
             }
