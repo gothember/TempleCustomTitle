@@ -1,0 +1,24 @@
+name: TempleTitles
+version: 1.0.0
+main: ru.templetitles.TempleTitles
+api-version: 1.16
+author: Jules
+description: A plugin for custom titles using a token currency.
+commands:
+  customtitul:
+    description: Allows players to request and manage their custom titles.
+    usage: /customtitul
+    permission: templetitles.use
+    permission-message: You do not have permission to use this command.
+  customtituls:
+    description: Allows administrators to manage custom title requests.
+    usage: /customtituls [give <игрок> <количество>]
+    permission: templetitles.admin
+    permission-message: You do not have permission to use this command.
+permissions:
+  templetitles.use:
+    description: Allows use of the /customtitul command.
+    default: true
+  templetitles.admin:
+    description: Allows use of the /customtituls command for managing title requests.
+    default: op
