@@ -51,6 +51,8 @@ messages:
     # Feedback for admins after approving/rejecting a title. Placeholders: %title%, %player%
     admin_title_approved_feedback: "&aTitle '%title%' approved for player %player%."
     admin_title_rejected_feedback: "&cTitle '%title%' rejected for player %player%."
+  # Message for when the admin review queue for titles is full
+  max_pending_requests_reached: "&cSorry, the title request queue is currently full. Please try again later."
 
 #--------------------------------------------------#
 # LuckPerms Integration Settings                   #
@@ -95,6 +97,8 @@ title_properties:
       - "(?i)owner"
       - "(?i)staff"
     pattern_match_warning_message: "&cYour title contains forbidden characters or patterns."
+  # Maximum number of titles allowed in the admin review queue at any given time.
+  max_pending_requests: 100
 
 #--------------------------------------------------#
 # GUI (Graphical User Interface) Configurations    #

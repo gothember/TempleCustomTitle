@@ -44,19 +44,14 @@ public class ChatListener implements Listener {
             if (titleName.length() < minLength) {
                 player.sendMessage(dataManager.getMsgTitleInputTooShort().replace("%min_length%", String.valueOf(minLength))); // Use DataManager
                 // Player remains in input mode to try again or type 'cancel'
-                return; 
+                return;
             }
             if (titleName.length() > maxLength) {
                 player.sendMessage(dataManager.getMsgTitleInputTooLong().replace("%max_length%", String.valueOf(maxLength))); // Use DataManager
                 // Player remains in input mode to try again or type 'cancel'
-                // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
                 return;
             }
-            if (titleName.length() > maxLength) {
-                player.sendMessage(dataManager.getMsgTitleInputTooLong().replace("%max_length%", String.valueOf(maxLength)));
-                // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
-                return;
-            }
+            // Removed duplicate maxLength check here
 
             // New Pattern Validation
             if (dataManager.isPatternValidationEnabled()) {
@@ -65,10 +60,17 @@ public class ChatListener implements Listener {
                 for (Pattern pattern : forbiddenPatterns) {
                     if (pattern.matcher(titleName).find()) {
                         player.sendMessage(dataManager.getMsgTitlePatternViolation());
-                        // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
-                        return; // Stop further processing, player remains in input mode
+                        // Player remains in input mode
+                        return;
                     }
                 }
+            }
+
+            // New: Max Pending Requests Check
+            if (dataManager.getPendingRequests().size() >= dataManager.getMaxPendingRequests()) {
+                player.sendMessage(dataManager.getMsgMaxPendingRequestsReached());
+                // Player remains in input mode
+                return;
             }
 
             // All validations passed

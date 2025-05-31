@@ -94,9 +94,11 @@ public class DataManager {
     private String titleStatusPendingText;  // Text for "на рассмотрении" status
     private int titleRequestCost;
     private List<String> titleInputCancelKeywords;
-    private boolean patternValidationEnabled; // New
-    private List<Pattern> compiledForbiddenPatterns; // New
-    private String msgTitlePatternViolation; // New
+    private boolean patternValidationEnabled;
+    private List<Pattern> compiledForbiddenPatterns;
+    private String msgTitlePatternViolation;
+    private int maxPendingRequests; // New
+    private String msgMaxPendingRequestsReached; // New
 
     // Dirty flags for saving
     private boolean pendingDirty = false;
@@ -262,6 +264,8 @@ public class DataManager {
         // Load Title Pattern Validation Settings
         patternValidationEnabled = plugin.getConfig().getBoolean("title_properties.validation.enable_pattern_validation", true);
         msgTitlePatternViolation = Util.translateColors(plugin.getConfig().getString("title_properties.validation.pattern_match_warning_message", "&cYour title contains forbidden characters or patterns."));
+        maxPendingRequests = plugin.getConfig().getInt("title_properties.max_pending_requests", 100); // New
+        msgMaxPendingRequestsReached = Util.translateColors(plugin.getConfig().getString("messages.max_pending_requests_reached", "&cSorry, the title request queue is currently full. Please try again later.")); // New
 
         compiledForbiddenPatterns = new ArrayList<>();
         List<String> rawPatterns = plugin.getConfig().getStringList("title_properties.validation.forbidden_patterns");
@@ -679,7 +683,9 @@ public class DataManager {
     public String getTitleStatusPendingText() { return titleStatusPendingText; }
     public int getTitleRequestCost() { return titleRequestCost; }
     public List<String> getTitleInputCancelKeywords() { return titleInputCancelKeywords; }
-    public boolean isPatternValidationEnabled() { return patternValidationEnabled; } // New
-    public List<Pattern> getCompiledForbiddenPatterns() { return compiledForbiddenPatterns; } // New
-    public String getMsgTitlePatternViolation() { return msgTitlePatternViolation; } // New
+    public boolean isPatternValidationEnabled() { return patternValidationEnabled; }
+    public List<Pattern> getCompiledForbiddenPatterns() { return compiledForbiddenPatterns; }
+    public String getMsgTitlePatternViolation() { return msgTitlePatternViolation; }
+    public int getMaxPendingRequests() { return maxPendingRequests; } // New
+    public String getMsgMaxPendingRequestsReached() { return msgMaxPendingRequestsReached; } // New
 }
