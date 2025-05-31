@@ -4,7 +4,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-import java.util.List; // Added for List
+import java.util.List;
+import java.util.regex.Pattern; // Added for Pattern
 
 public class ChatListener implements Listener {
     private final TempleTitles plugin; // plugin field might not be used, but good for consistency
@@ -26,7 +27,7 @@ public class ChatListener implements Listener {
 
             // Basic validation (e.g., length, allowed characters - can be expanded)
             // This part can be kept or removed based on whether validation is desired here or elsewhere
-            
+
             String lowerCaseMessage = titleName.toLowerCase().trim();
             List<String> cancelKeywords = dataManager.getTitleInputCancelKeywords();
 
@@ -48,16 +49,36 @@ public class ChatListener implements Listener {
             if (titleName.length() > maxLength) {
                 player.sendMessage(dataManager.getMsgTitleInputTooLong().replace("%max_length%", String.valueOf(maxLength))); // Use DataManager
                 // Player remains in input mode to try again or type 'cancel'
+                // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
                 return;
             }
-            
-            titleInputManager.stopTitleInput(player); // Stop input mode
+            if (titleName.length() > maxLength) {
+                player.sendMessage(dataManager.getMsgTitleInputTooLong().replace("%max_length%", String.valueOf(maxLength)));
+                // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
+                return;
+            }
+
+            // New Pattern Validation
+            if (dataManager.isPatternValidationEnabled()) {
+                List<Pattern> forbiddenPatterns = dataManager.getCompiledForbiddenPatterns();
+                // titleName is the raw input here, which is what we want to validate
+                for (Pattern pattern : forbiddenPatterns) {
+                    if (pattern.matcher(titleName).find()) {
+                        player.sendMessage(dataManager.getMsgTitlePatternViolation());
+                        // titleInputManager.stopTitleInput(player); // Stop on failure - No, keep them in input mode
+                        return; // Stop further processing, player remains in input mode
+                    }
+                }
+            }
+
+            // All validations passed
+            titleInputManager.stopTitleInput(player); // Stop input mode successfully
 
             TitleRequest request = new TitleRequest(player.getUniqueId(), player.getName(), titleName, System.currentTimeMillis());
             dataManager.addPendingRequest(request);
-            
+
             player.sendMessage(dataManager.getMsgRequestSubmitted().replace("%title%", titleName)); // Use DataManager (already translated)
-            
+
             // Optional: Admin notification logic can be added here if desired.
             // Example: Bukkit.broadcast(dataManager.getMsgAdminNewRequestNotification().replace(...), "templetitles.admin.notify");
         }

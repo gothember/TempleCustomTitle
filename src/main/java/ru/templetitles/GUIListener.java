@@ -39,14 +39,14 @@ public class GUIListener implements Listener {
 
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
-            
+
             int clickedSlot = event.getSlot(); // Use getSlot() for raw slot index
 
             // Check if the clicked slot is a decoration slot and not a functional slot
             Map<Integer, DataManager.DecorationItemConfig> decorations = dataManager.getGuiMainMenuDecorations();
             if (decorations != null && decorations.containsKey(clickedSlot)) {
                 // Ensure it's not a functional slot that might accidentally be in decoration range
-                if (clickedSlot == 20 || clickedSlot == 22) { 
+                if (clickedSlot == 20 || clickedSlot == 22) {
                     // This is a functional slot, let subsequent logic handle it.
                 } else {
                     DataManager.DecorationItemConfig decoConfig = decorations.get(clickedSlot);
@@ -88,7 +88,7 @@ public class GUIListener implements Listener {
             }
             // Other clicks in this GUI are implicitly handled by the decoration check or if they don't match slots 20/22
 
-        } else if (viewTitle.equals(dataManager.getGuiPlayerTitlesViewTitle())) { 
+        } else if (viewTitle.equals(dataManager.getGuiPlayerTitlesViewTitle())) {
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() != Material.PAPER) return;
@@ -120,11 +120,11 @@ public class GUIListener implements Listener {
                                                        dataManager.getLuckpermsSuffixPriority(),
                                                        titleWithLeadingSpace); // Use title with leading space
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                        player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", translatedTitleForDisplayAndCommand)); 
+                        player.sendMessage(dataManager.getMsgTitleEquipped().replace("%title%", translatedTitleForDisplayAndCommand));
                         player.closeInventory();
                     } else {
                         // Replace %title% placeholder in the message
-                        player.sendMessage(dataManager.getMsgTitleNotApproved().replace("%title%", translatedTitleForDisplayAndCommand)); 
+                        player.sendMessage(dataManager.getMsgTitleNotApproved().replace("%title%", translatedTitleForDisplayAndCommand));
                         player.closeInventory();
                     }
                 } else {
@@ -162,7 +162,7 @@ public class GUIListener implements Listener {
             }
             String requesterName = originalRequest.getPlayerName();
             // Using raw status "одобрен" for PlayerTitle internal status field
-            String approvedStatus = "одобрен"; 
+            String approvedStatus = "одобрен";
             String rawTitleForLogic = originalRequest.getTitle(); // Use the title from the request object
 
             // Translate title for messages
@@ -172,19 +172,19 @@ public class GUIListener implements Listener {
                 PlayerTitle newPlayerTitle = new PlayerTitle(requesterUUID, requesterName, rawTitleForLogic, approvedStatus, dataManager.getCurrentFormattedDate(), admin.getName());
                 dataManager.addPlayerTitle(newPlayerTitle);
                 dataManager.removePendingRequest(requesterUUID, rawTitleForLogic);
-                admin.sendMessage(dataManager.getMsgAdminTitleApprovedFeedback() 
+                admin.sendMessage(dataManager.getMsgAdminTitleApprovedFeedback()
                                   .replace("%title%", translatedTitleForMessage)
                                   .replace("%player%", requesterName));
 
                 Player requesterOnline = Bukkit.getPlayer(requesterUUID);
                 if (requesterOnline != null) {
-                    requesterOnline.sendMessage(dataManager.getMsgTitleApproved().replace("%title%", translatedTitleForMessage)); 
+                    requesterOnline.sendMessage(dataManager.getMsgTitleApproved().replace("%title%", translatedTitleForMessage));
                 }
                 AdminTitleGUI.openAdminRequestsView(admin, dataManager.getPendingRequests(), dataManager, plugin);
 
             } else if (event.getClick() == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT) { // Reject
                 dataManager.removePendingRequest(requesterUUID, rawTitleForLogic);
-                admin.sendMessage(dataManager.getMsgAdminTitleRejectedFeedback() 
+                admin.sendMessage(dataManager.getMsgAdminTitleRejectedFeedback()
                                   .replace("%title%", translatedTitleForMessage)
                                   .replace("%player%", requesterName));
 

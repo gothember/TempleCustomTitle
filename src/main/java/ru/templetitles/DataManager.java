@@ -14,15 +14,19 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Arrays; // Added for Arrays.asList
+import java.util.Arrays;
 // java.io.File is already imported above
-import org.bukkit.ChatColor; 
+import org.bukkit.ChatColor;
+import org.bukkit.Bukkit; // Added
+import org.bukkit.OfflinePlayer; // Added
 // For Util class:
-// import ru.templetitles.Util; 
+// import ru.templetitles.Util;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.Material;
-import org.bukkit.inventory.meta.ItemMeta; // Added
-import org.bukkit.configuration.ConfigurationSection; // Added
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.configuration.ConfigurationSection;
+import java.util.regex.Pattern; // Added
+import java.util.regex.PatternSyntaxException; // Added
 
 public class DataManager {
     private final JavaPlugin plugin;
@@ -81,15 +85,23 @@ public class DataManager {
     private String cmdTokensAmountPositive;
     private String cmdTokensInvalidAmount;
     private String cmdTokensUnknownSubcommand;
-    
+
     // Title Properties
     private int titleMinLength;
     private int titleMaxLength;
     private String titleStatusApprovedText; // Text for "одобрен" status in GUIs
     private String titleStatusRejectedText; // Text for "отклонен" status
     private String titleStatusPendingText;  // Text for "на рассмотрении" status
-    private int titleRequestCost; 
-    private List<String> titleInputCancelKeywords; // New field
+    private int titleRequestCost;
+    private List<String> titleInputCancelKeywords;
+    private boolean patternValidationEnabled; // New
+    private List<Pattern> compiledForbiddenPatterns; // New
+    private String msgTitlePatternViolation; // New
+
+    // Dirty flags for saving
+    private boolean pendingDirty = false;
+    private boolean titlesDirty = false;
+    private int autoSaveIntervalMinutes;
 
     private File pendingTitlesFile;
     private FileConfiguration pendingTitlesConfig;
@@ -124,7 +136,7 @@ public class DataManager {
         }
         // It's important to reload the config after saveDefaultConfig might have run,
         // or if the config could have been changed externally.
-        plugin.reloadConfig(); 
+        plugin.reloadConfig();
 
         timeFormat = plugin.getConfig().getString("messages.time_format", "dd.MM.yyyy HH:mm"); // Not a colored message
         luckpermsSuffixPriority = plugin.getConfig().getInt("luckperms.suffix_priority", 1); // Not a colored message
@@ -151,7 +163,7 @@ public class DataManager {
         msgAdminRequestStale = Util.translateColors(plugin.getConfig().getString("messages.general.admin_request_stale", "&cThis request seems to be outdated or already processed."));
         msgAdminTitleApprovedFeedback = Util.translateColors(plugin.getConfig().getString("messages.general.admin_title_approved_feedback", "&aTitle '%title%' approved for player %player%."));
         msgAdminTitleRejectedFeedback = Util.translateColors(plugin.getConfig().getString("messages.general.admin_title_rejected_feedback", "&cTitle '%title%' rejected for player %player%."));
-        
+
         // GUI: main_menu
         guiMainMenuTitle = Util.translateColors(plugin.getConfig().getString("gui.main_menu.title", "&5Custom Title Options"));
         guiMainMenuItemRequestName = Util.translateColors(plugin.getConfig().getString("gui.main_menu.items.request_title.name", "&bRequest a New Title"));
@@ -159,7 +171,7 @@ public class DataManager {
         guiMainMenuItemRequestNoTokensLore = Util.translateColors(plugin.getConfig().getString("gui.main_menu.items.request_title.no_tokens_lore", "&cNot enough tokens!"));
         guiMainMenuItemViewOwnedName = Util.translateColors(plugin.getConfig().getString("gui.main_menu.items.view_owned.name", "&aView Your Titles"));
         guiMainMenuItemViewOwnedLore = Util.translateStringList(plugin.getConfig().getStringList("gui.main_menu.items.view_owned.lore"));
-        
+
         // Load GUI Main Menu Decorations
         guiMainMenuDecorations = new HashMap<>();
         ConfigurationSection decoSection = plugin.getConfig().getConfigurationSection("gui.main_menu.decorations");
@@ -207,7 +219,7 @@ public class DataManager {
         guiPlayerTitlesViewItemLoreDateLine = Util.translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.date_line"));
         guiPlayerTitlesViewItemLoreEquipInstruction = Util.translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.equip_instruction"));
         guiPlayerTitlesViewItemLoreNotApprovedInstruction = Util.translateStringList(plugin.getConfig().getStringList("gui.player_titles_view.item_lore.not_approved_instruction"));
-        
+
         // GUI: admin_requests_view
         guiAdminRequestsViewTitle = Util.translateColors(plugin.getConfig().getString("gui.admin_requests_view.title", "&3Title Requests"));
         guiAdminRequestsViewNoRequestsItemName = Util.translateColors(plugin.getConfig().getString("gui.admin_requests_view.no_requests_item.name", "&cNo Active Requests"));
@@ -228,7 +240,7 @@ public class DataManager {
         titleStatusRejectedText = Util.translateColors(plugin.getConfig().getString("title_properties.status_rejected_text", "&cRejected"));
         titleStatusPendingText = Util.translateColors(plugin.getConfig().getString("title_properties.status_pending_text", "&ePending Review"));
         titleRequestCost = plugin.getConfig().getInt("title_properties.title_request_cost", 1);
-        
+
         // Load Title Input Cancel Keywords
         List<String> rawCancelKeywords = plugin.getConfig().getStringList("title_properties.cancel_keywords");
         if (rawCancelKeywords == null || rawCancelKeywords.isEmpty()) {
@@ -242,6 +254,27 @@ public class DataManager {
         }
         if (this.titleInputCancelKeywords.isEmpty()) { // Failsafe
             this.titleInputCancelKeywords.add("cancel");
+        }
+
+        // Load auto-save interval
+        autoSaveIntervalMinutes = plugin.getConfig().getInt("saving.auto_save_interval_minutes", 5);
+
+        // Load Title Pattern Validation Settings
+        patternValidationEnabled = plugin.getConfig().getBoolean("title_properties.validation.enable_pattern_validation", true);
+        msgTitlePatternViolation = Util.translateColors(plugin.getConfig().getString("title_properties.validation.pattern_match_warning_message", "&cYour title contains forbidden characters or patterns."));
+
+        compiledForbiddenPatterns = new ArrayList<>();
+        List<String> rawPatterns = plugin.getConfig().getStringList("title_properties.validation.forbidden_patterns");
+        if (rawPatterns != null) {
+            for (String patternStr : rawPatterns) {
+                try {
+                    if (patternStr != null && !patternStr.trim().isEmpty()) {
+                        compiledForbiddenPatterns.add(Pattern.compile(patternStr));
+                    }
+                } catch (PatternSyntaxException e) {
+                    plugin.getLogger().warning("Invalid regex pattern in config 'title_properties.validation.forbidden_patterns': " + patternStr + " - Error: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -282,14 +315,77 @@ public class DataManager {
         playerTitlesConfig = YamlConfiguration.loadConfiguration(playerTitlesFile);
     }
 
-    public void savePendingRequests() {
+    private void executeSavePendingRequests() { // Renamed and made private
         try {
             pendingTitlesConfig.save(pendingTitlesFile);
+            plugin.getLogger().info("Saved pending title requests to disk."); // Optional: log save
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save pending titles: " + e.getMessage());
         }
     }
-    
+
+    // Renamed savePlayerTitles to executeSavePlayerTitles and made it private
+    private void executeSavePlayerTitles() {
+        playerTitlesConfig.set("players", null);
+        for (Map.Entry<UUID, List<PlayerTitle>> entry : playerTitlesMap.entrySet()) {
+            UUID playerUUID = entry.getKey();
+            List<PlayerTitle> titlesList = entry.getValue();
+            String playerPath = "players." + playerUUID.toString();
+            if (titlesList.isEmpty() && (!playerTokensMap.containsKey(playerUUID) || getPlayerTokens(playerUUID) == 0)) {
+                continue;
+            }
+            String playerName = titlesList.isEmpty() ? (playerTokensMap.containsKey(playerUUID) ? Bukkit.getOfflinePlayer(playerUUID).getName() : "UnknownPlayer") : titlesList.get(0).getPlayerName();
+            if (playerName == null) playerName = "UnknownPlayer"; // Ensure playerName is not null
+
+            playerTitlesConfig.set(playerPath + ".playerName", playerName);
+            playerTitlesConfig.set(playerPath + ".tokens", getPlayerTokens(playerUUID));
+            List<Map<String, Object>> titlesData = new ArrayList<>();
+            for (PlayerTitle pt : titlesList) {
+                Map<String, Object> titleMap = new HashMap<>();
+                titleMap.put("title", pt.getTitle());
+                titleMap.put("status", pt.getStatus());
+                titleMap.put("approvalDate", pt.getApprovalDate());
+                titleMap.put("adminApproverName", pt.getAdminApproverName());
+                titlesData.add(titleMap);
+            }
+            playerTitlesConfig.set(playerPath + ".titles", titlesData);
+        }
+         // Save players who might only have tokens and no titles
+        for (Map.Entry<UUID, Integer> tokenEntry : playerTokensMap.entrySet()) {
+            UUID playerUUID = tokenEntry.getKey();
+            String playerPath = "players." + playerUUID.toString();
+            if (!playerTitlesConfig.contains(playerPath)) { // Only save if not already processed by titles loop
+                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
+                 String playerName = offlinePlayer.getName() != null ? offlinePlayer.getName() : "UnknownPlayer";
+                 playerTitlesConfig.set(playerPath + ".playerName", playerName);
+                 playerTitlesConfig.set(playerPath + ".tokens", tokenEntry.getValue());
+                 playerTitlesConfig.set(playerPath + ".titles", new ArrayList<>()); // Empty titles list
+            }
+        }
+        try {
+            playerTitlesConfig.save(playerTitlesFile);
+            plugin.getLogger().info("Saved player titles and tokens to disk."); // Optional: log save
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player titles: " + e.getMessage());
+        }
+    }
+
+    public synchronized void saveAllData(boolean forceSave) {
+        boolean savedSomething = false;
+        if (forceSave || this.pendingDirty) {
+            executeSavePendingRequests();
+            this.pendingDirty = false;
+            savedSomething = true;
+        }
+        if (forceSave || this.titlesDirty) {
+            executeSavePlayerTitles();
+            this.titlesDirty = false;
+            savedSomething = true;
+        }
+        if (savedSomething && !forceSave && autoSaveIntervalMinutes > 0) { // Log only for auto-saves that did something
+           plugin.getLogger().info("Auto-saved plugin data.");
+        }
+    }
 
     @SuppressWarnings("unchecked")
     public void loadPendingRequests() {
@@ -314,26 +410,30 @@ public class DataManager {
             reqMap.put("uuid", req.getPlayerUUID().toString());
             reqMap.put("playerName", req.getPlayerName());
             reqMap.put("title", req.getTitle());
-            reqMap.put("submissionTimestamp", req.getSubmissionTimestamp()); // New
+            reqMap.put("submissionTimestamp", req.getSubmissionTimestamp());
             requestsData.add(reqMap);
         }
         pendingTitlesConfig.set("requests", requestsData);
-        savePendingRequests();
+        this.pendingDirty = true; // Mark as dirty
+        // savePendingRequests(); // Removed
     }
 
     public void removePendingRequest(UUID playerUUID, String title) {
-        pendingRequestsList.removeIf(req -> req.getPlayerUUID().equals(playerUUID) && req.getTitle().equals(title));
-        // Re-save the updated list
-        List<Map<String, Object>> requestsData = new ArrayList<>();
-        for (TitleRequest req : pendingRequestsList) {
-            Map<String, Object> reqMap = new HashMap<>();
-            reqMap.put("uuid", req.getPlayerUUID().toString());
-            reqMap.put("playerName", req.getPlayerName());
-            reqMap.put("title", req.getTitle());
-            requestsData.add(reqMap);
+        boolean removed = pendingRequestsList.removeIf(req -> req.getPlayerUUID().equals(playerUUID) && req.getTitle().equals(title));
+        if (removed) {
+            List<Map<String, Object>> requestsData = new ArrayList<>();
+            for (TitleRequest req : pendingRequestsList) {
+                Map<String, Object> reqMap = new HashMap<>();
+                reqMap.put("uuid", req.getPlayerUUID().toString());
+                reqMap.put("playerName", req.getPlayerName());
+                reqMap.put("title", req.getTitle());
+                reqMap.put("submissionTimestamp", req.getSubmissionTimestamp()); // Ensure timestamp is saved
+                requestsData.add(reqMap);
+            }
+            pendingTitlesConfig.set("requests", requestsData);
+            this.pendingDirty = true; // Mark as dirty
+            // savePendingRequests(); // Removed
         }
-        pendingTitlesConfig.set("requests", requestsData);
-        savePendingRequests();
     }
 
     public List<TitleRequest> getPendingRequests() {
@@ -376,31 +476,32 @@ public class DataManager {
         List<PlayerTitle> titles = playerTitlesMap.getOrDefault(playerTitle.getPlayerUUID(), new ArrayList<>());
         titles.add(playerTitle);
         playerTitlesMap.put(playerTitle.getPlayerUUID(), titles);
-        savePlayerTitles();
+        this.titlesDirty = true; // Mark as dirty
+        // savePlayerTitles(); // Removed
     }
     
     public void removePlayerTitle(UUID playerUUID, String titleName) {
         List<PlayerTitle> titles = playerTitlesMap.get(playerUUID);
         if (titles != null) {
-            titles.removeIf(title -> title.getTitle().equals(titleName));
-            // Optional: if all titles removed, could remove player entry from map, or leave with empty list
-            // if (titles.isEmpty()) {
-            //     playerTitlesMap.remove(playerUUID); 
-            // }
+            boolean removed = titles.removeIf(title -> title.getTitle().equals(titleName));
+            if (removed) {
+                this.titlesDirty = true; // Mark as dirty if something was actually removed
+            }
+            // if (titles.isEmpty()) { playerTitlesMap.remove(playerUUID); } // Optional
         }
-        savePlayerTitles(); // Save changes
+        // savePlayerTitles(); // Removed
     }
 
     public List<PlayerTitle> getPlayerTitles(UUID playerUUID) {
-        return playerTitlesMap.getOrDefault(playerUUID, new ArrayList<>()); // Return empty list, not null
+        return playerTitlesMap.getOrDefault(playerUUID, new ArrayList<>());
     }
-    
+
     public void removeAllPlayerTitles(UUID playerUUID) {
-        playerTitlesMap.remove(playerUUID);
-        // Tokens are kept, as per original logic.
-        // If tokens should also be removed, uncomment:
-        // playerTokensMap.remove(playerUUID);
-        savePlayerTitles();
+        if (playerTitlesMap.containsKey(playerUUID)) {
+            playerTitlesMap.remove(playerUUID);
+            this.titlesDirty = true; // Mark as dirty
+        }
+        // savePlayerTitles(); // Removed
     }
 
     // Token Management Methods
@@ -411,11 +512,10 @@ public class DataManager {
     public void setPlayerTokens(UUID playerUUID, int amount) {
         int newAmount = Math.max(0, amount); // Ensure tokens don't go negative
         playerTokensMap.put(playerUUID, newAmount);
-        // Ensure the player's section exists if we are setting tokens,
-        // otherwise, this might do nothing if they don't have a title entry yet.
-        // This is generally fine as tokens are associated with players who interact with titles.
-        playerTitlesConfig.set("players." + playerUUID.toString() + ".tokens", newAmount); // Path updated
-        savePlayerTitles(); // Save immediately
+        // Ensure the player's section exists if we are setting tokens.
+        // This will be handled by the unified savePlayerTitles which saves both titles and tokens.
+        this.titlesDirty = true; // Mark as dirty (as tokens are part of player_titles.yml)
+        // savePlayerTitles(); // Removed
     }
 
     public void addPlayerTokens(UUID playerUUID, int amountToAdd) {
@@ -441,44 +541,8 @@ public class DataManager {
     }
 
     // Rewritten savePlayerTitles
-    public void savePlayerTitles() { // Removed @Override
-        // Clear the existing "players" section before saving to avoid orphaned data
-        playerTitlesConfig.set("players", null); 
-
-        for (Map.Entry<UUID, List<PlayerTitle>> entry : playerTitlesMap.entrySet()) {
-            UUID playerUUID = entry.getKey();
-            List<PlayerTitle> titlesList = entry.getValue();
-            String playerPath = "players." + playerUUID.toString();
-
-            if (titlesList.isEmpty() && !playerTokensMap.containsKey(playerUUID)) { 
-                if (!playerTokensMap.containsKey(playerUUID) || getPlayerTokens(playerUUID) == 0) continue;
-            }
-            
-            String playerName = titlesList.isEmpty() ? "UnknownPlayer" : titlesList.get(0).getPlayerName(); 
-
-            playerTitlesConfig.set(playerPath + ".playerName", playerName); 
-            playerTitlesConfig.set(playerPath + ".tokens", getPlayerTokens(playerUUID)); // Save tokens
-
-            List<Map<String, Object>> titlesData = new ArrayList<>();
-            for (PlayerTitle pt : titlesList) {
-                Map<String, Object> titleMap = new HashMap<>();
-                titleMap.put("title", pt.getTitle());
-                titleMap.put("status", pt.getStatus());
-                titleMap.put("approvalDate", pt.getApprovalDate());
-                titleMap.put("adminApproverName", pt.getAdminApproverName());
-                titlesData.add(titleMap);
-            }
-            playerTitlesConfig.set(playerPath + ".titles", titlesData);
-        }
-
-        try {
-            playerTitlesConfig.save(playerTitlesFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save player titles: " + e.getMessage());
-        }
-    }
-    
     // Getter methods for configuration values
+    public int getAutoSaveIntervalMinutes() { return autoSaveIntervalMinutes; } // New getter
     public String getTimeFormat() {
         return timeFormat;
     }
@@ -531,13 +595,13 @@ public class DataManager {
     // This method is now removed as its functionality is superseded by Util.translateStringList
     /*
     private List<String> translateStringList(List<String> list) {
-        if (list == null || list.isEmpty()) { 
+        if (list == null || list.isEmpty()) {
             return new ArrayList<>();
         }
         List<String> translatedList = new ArrayList<>();
         for (String s : list) {
             // This would be an old call if kept:
-            // translatedList.add(ChatColor.translateAlternateColorCodes('&', s)); 
+            // translatedList.add(ChatColor.translateAlternateColorCodes('&', s));
             // Should be using Util.translateColors(s) if this method was to be kept and updated,
             // but Util.translateStringList handles the loop already.
         }
@@ -600,7 +664,7 @@ public class DataManager {
     public List<String> getGuiAdminRequestsViewNoRequestsItemLore() { return guiAdminRequestsViewNoRequestsItemLore; }
     public String getGuiAdminRequestsViewRequestItemNamePrefix() { return guiAdminRequestsViewRequestItemNamePrefix; }
     public List<String> getGuiAdminRequestsViewRequestItemLore() { return guiAdminRequestsViewRequestItemLore; }
-    
+
     // Getters for Commands: tokens
     public String getCmdTokensUsage() { return cmdTokensUsage; }
     public String getCmdTokensAmountPositive() { return cmdTokensAmountPositive; }
@@ -614,5 +678,8 @@ public class DataManager {
     public String getTitleStatusRejectedText() { return titleStatusRejectedText; }
     public String getTitleStatusPendingText() { return titleStatusPendingText; }
     public int getTitleRequestCost() { return titleRequestCost; }
-    public List<String> getTitleInputCancelKeywords() { return titleInputCancelKeywords; } // New getter
+    public List<String> getTitleInputCancelKeywords() { return titleInputCancelKeywords; }
+    public boolean isPatternValidationEnabled() { return patternValidationEnabled; } // New
+    public List<Pattern> getCompiledForbiddenPatterns() { return compiledForbiddenPatterns; } // New
+    public String getMsgTitlePatternViolation() { return msgTitlePatternViolation; } // New
 }

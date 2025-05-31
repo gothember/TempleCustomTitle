@@ -13,7 +13,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 // UUID import is not strictly necessary here if not used directly, but good for context
-// import java.util.UUID; 
+// import java.util.UUID;
 
 public class AdminTitleGUI { // No longer implements InventoryHolder
 
@@ -59,7 +59,7 @@ public class AdminTitleGUI { // No longer implements InventoryHolder
                         processedLore.add(line
                             .replace("%player_name%", req.getPlayerName())
                             .replace("%submission_date%", dataManager.formatTimestamp(req.getSubmissionTimestamp()))
-                            .replace("%title_name%", translatedRequestTitleForLore) 
+                            .replace("%title_name%", translatedRequestTitleForLore)
                         );
                     }
                     meta.setLore(processedLore);
@@ -69,7 +69,7 @@ public class AdminTitleGUI { // No longer implements InventoryHolder
                     NamespacedKey uuidKey = new NamespacedKey(plugin, "requester_uuid");
                     meta.getPersistentDataContainer().set(titleKey, PersistentDataType.STRING, req.getTitle());
                     meta.getPersistentDataContainer().set(uuidKey, PersistentDataType.STRING, req.getPlayerUUID().toString());
-                    
+
                     item.setItemMeta(meta);
                     inventory.setItem(i, item); // Add item to the GUI
                 }

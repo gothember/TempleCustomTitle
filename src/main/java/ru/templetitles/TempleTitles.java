@@ -7,7 +7,7 @@ import ru.templetitles.CustomTitulsAdminCommand;
 import ru.templetitles.GUIListener;
 import ru.templetitles.ChatListener;
 import ru.templetitles.TitleInputManager;
-// import org.bukkit.Bukkit; // Not directly used here but GUIListener uses it.
+import org.bukkit.Bukkit; // Added for Bukkit.getScheduler()
 
 public final class TempleTitles extends JavaPlugin {
 
@@ -45,19 +45,32 @@ public final class TempleTitles extends JavaPlugin {
         // - Check player token balance before allowing title creation
         // - Deduct tokens upon successful title request or approval
 
+        // Schedule auto-saving task
+        int intervalMinutes = dataManager.getAutoSaveIntervalMinutes();
+        if (intervalMinutes > 0) {
+            long intervalTicks = 20L * 60 * intervalMinutes; // Convert minutes to ticks
+            Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+                () -> dataManager.saveAllData(false),
+                intervalTicks,  // Initial delay
+                intervalTicks); // Period
+            getLogger().info("Data auto-saving scheduled every " + intervalMinutes + " minutes.");
+        } else {
+            getLogger().info("Data auto-saving is disabled.");
+        }
+
         getLogger().info("TempleTitles plugin has been successfully enabled!");
     }
 
     @Override
     public void onDisable() {
         getLogger().info("Disabling TempleTitles plugin...");
-        // Data is saved on modification by DataManager's methods upon add/remove actions.
-        // Explicit saves here would be redundant unless there are specific operations
-        // that don't trigger saves in DataManager.
         if (dataManager != null) {
-            // Example: dataManager.saveAllDataIfNecessary(); // If such a method existed
-            getLogger().info("Data saving is handled by DataManager during operations.");
+            getLogger().info("Saving all plugin data...");
+            dataManager.saveAllData(true); // Force save all dirty data
+            getLogger().info("Plugin data saved.");
         }
+        // Cancel all tasks scheduled by this plugin to prevent errors on reload
+        Bukkit.getScheduler().cancelTasks(this);
         getLogger().info("TempleTitles plugin has been disabled.");
     }
     

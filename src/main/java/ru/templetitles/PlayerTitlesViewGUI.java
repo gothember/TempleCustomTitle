@@ -37,26 +37,26 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
                 List<String> processedLore = new ArrayList<>();
                 String statusText;
                 String titleStatus = titleEntry.getStatus(); // Assuming status is already in a comparable format (e.g. "одобрен")
-                                
+
                 // Determine status text from DataManager based on the title's status field
                 if (dataManager.getTitleStatusApprovedText().contains(titleStatus) || "одобрен".equalsIgnoreCase(titleStatus)) { // Example check
                     statusText = dataManager.getTitleStatusApprovedText();
                 } else if (dataManager.getTitleStatusRejectedText().contains(titleStatus) || "отклонен".equalsIgnoreCase(titleStatus)) {
                     statusText = dataManager.getTitleStatusRejectedText();
                 } else { // Default to pending or a generic status if not explicitly matched
-                    statusText = dataManager.getTitleStatusPendingText(); 
+                    statusText = dataManager.getTitleStatusPendingText();
                 }
 
                 // Base Lore
                 // Translate player title for lore placeholder replacement
-                String translatedPlayerTitleForLore = Util.translateColors(rawPlayerTitle); 
+                String translatedPlayerTitleForLore = Util.translateColors(rawPlayerTitle);
                 for (String line : dataManager.getGuiPlayerTitlesViewItemLoreBase()) {
                     processedLore.add(line
                         .replace("%titul_name%", translatedPlayerTitleForLore)
                         // No other common placeholders typically in base, but can be added
                     );
                 }
-                
+
                 // Status Line
                 for (String line : dataManager.getGuiPlayerTitlesViewItemLoreStatusLine()) {
                     processedLore.add(line.replace("%status%", statusText));
@@ -68,7 +68,7 @@ public class PlayerTitlesViewGUI { // No longer implements InventoryHolder
                         processedLore.add(line.replace("%admin_name%", titleEntry.getAdminApproverName()));
                     }
                 }
-                
+
                 // Approval Date Line (only if approval date exists)
                 if (titleEntry.getApprovalDate() != null && !titleEntry.getApprovalDate().isEmpty()) {
                     for (String line : dataManager.getGuiPlayerTitlesViewItemLoreDateLine()) {

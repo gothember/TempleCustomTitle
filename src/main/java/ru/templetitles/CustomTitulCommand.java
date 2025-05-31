@@ -49,7 +49,7 @@ public class CustomTitulCommand implements CommandExecutor {
         ItemMeta requestTitleMeta = requestTitleItem.getItemMeta();
         if (requestTitleMeta != null) {
             requestTitleMeta.setDisplayName(dataManager.getGuiMainMenuItemRequestName()); // Use DataManager
-            
+
             List<String> requestLore = new ArrayList<>();
             String costString = String.valueOf(dataManager.getTitleRequestCost());
             for (String line : dataManager.getGuiMainMenuItemRequestLore()) {
@@ -74,18 +74,18 @@ public class CustomTitulCommand implements CommandExecutor {
             for (Map.Entry<Integer, DataManager.DecorationItemConfig> entry : decorations.entrySet()) {
                 int slot = entry.getKey();
                 DataManager.DecorationItemConfig decoConfig = entry.getValue();
-                
+
                 // Ensure decoConfig and its ItemStack are not null before setting
                 if (decoConfig != null && decoConfig.getItemStack() != null) {
                     // Ensure decorations don't overwrite functional items (slots 20 and 22)
                     // Also check if slot is within GUI bounds (DataManager also validates this range during load for 0-44)
-                    if (slot >= 0 && slot < gui.getSize() && gui.getItem(slot) == null) { 
+                    if (slot >= 0 && slot < gui.getSize() && gui.getItem(slot) == null) {
                         gui.setItem(slot, decoConfig.getItemStack().clone()); // Use clone and correct variable 'gui'
                     }
                 }
             }
         }
-        
+
         player.openInventory(gui);
 
         return true;

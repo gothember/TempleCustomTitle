@@ -28,7 +28,7 @@ public class TokenCommand implements CommandExecutor {
             sender.sendMessage(dataManager.getCmdTokensUsage()); // Use DataManager
             return true;
         }
-        
+
         if (args[0].equalsIgnoreCase("give")) {
             if (args.length != 3) {
                 sender.sendMessage(dataManager.getCmdTokensUsage()); // Use DataManager
@@ -59,9 +59,9 @@ public class TokenCommand implements CommandExecutor {
                 sender.sendMessage(dataManager.getMsgPlayerNotFound().replace("%player%", displayPlayerName)); // Use DataManager
                 return true;
             }
-            
+
             dataManager.addPlayerTokens(targetOfflinePlayer.getUniqueId(), amount);
-            
+
             sender.sendMessage(dataManager.getMsgTokensSent() // Use DataManager
                                     .replace("%amount%", String.valueOf(amount))
                                     .replace("%player%", displayPlayerName));

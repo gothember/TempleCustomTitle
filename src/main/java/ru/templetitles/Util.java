@@ -38,7 +38,7 @@ public class Util {
         List<String> translatedList = new ArrayList<>();
         for (String s : list) {
             // Ensure individual strings in the list are also handled if they are null
-            translatedList.add(translateColors(s != null ? s : "")); 
+            translatedList.add(translateColors(s != null ? s : ""));
         }
         return translatedList;
     }

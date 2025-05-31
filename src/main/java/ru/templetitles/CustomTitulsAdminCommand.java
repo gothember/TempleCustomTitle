@@ -25,7 +25,7 @@ public class CustomTitulsAdminCommand implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "This command can only be used by players to open the GUI.");
             return true;
         }
-        
+
         // If any args are provided, show usage, as only GUI opening is supported now.
         if (args.length > 0) {
             sender.sendMessage(ChatColor.RED + "Usage: /customtituls - Opens the title request management GUI.");
@@ -34,10 +34,10 @@ public class CustomTitulsAdminCommand implements CommandExecutor {
 
         Player admin = (Player) sender;
         List<TitleRequest> requests = dataManager.getPendingRequests();
-        
+
         // Call the static method in AdminTitleGUI
         AdminTitleGUI.openAdminRequestsView(admin, requests, dataManager, plugin);
-        
+
         return true;
     }
 }
