@@ -258,3 +258,22 @@ saving:
   # Interval in minutes for automatically saving data (pending requests, player titles, tokens) to disk.
   # Set to 0 to disable auto-saving. Data will always be saved on server stop regardless of this setting.
   auto_save_interval_minutes: 5
+
+#--------------------------------------------------#
+# Time Duration Format Units                       #
+#--------------------------------------------------#
+# Used by TimeUtil.formatDuration to build human-readable time strings.
+# Ensure a leading space if you want a space before the unit.
+time_format_units:
+  day:
+    singular: " day"
+    plural: " days"
+  hour:
+    singular: " hour"
+    plural: " hours"
+  minute:
+    singular: " minute"
+    plural: " minutes"
+  second:
+    singular: " second"
+    plural: " seconds"

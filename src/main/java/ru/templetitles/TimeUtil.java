@@ -8,9 +8,43 @@ import java.util.regex.Pattern;
 
 public class TimeUtil {
 
-    // Pattern to match time strings like 1d, 2h, 3m, 4s, or combinations
-    // Supports simple formats like "1d", "2h30m", "10s"
-    // More complex parsing like "1d2h30m10s" can be added if needed, for now keep it simple for single units
+    // Static fields for localized time units
+    private static String daySingular = "day"; // Default to English, no leading/trailing spaces
+    private static String dayPlural = "days";
+    private static String hourSingular = "hour";
+    private static String hourPlural = "hours";
+    private static String minuteSingular = "minute";
+    private static String minutePlural = "minutes";
+    private static String secondSingular = "second";
+    private static String secondPlural = "seconds";
+
+    /**
+     * Initializes the TimeUtil with localized time unit strings from DataManager.
+     * This should be called once when the plugin enables and DataManager is ready.
+     * @param dataManager The DataManager instance to fetch configured strings from.
+     */
+    public static void init(DataManager dataManager) {
+        if (dataManager == null) {
+            System.err.println("[TimeUtil] Initialization with null DataManager. Using default time units.");
+            return;
+        }
+
+        // Helper to get string from DM or keep default if DM returns null/empty
+        daySingular = getStringOrDefault(dataManager.getTimeUnitDaySingular(), daySingular);
+        dayPlural = getStringOrDefault(dataManager.getTimeUnitDayPlural(), dayPlural);
+        hourSingular = getStringOrDefault(dataManager.getTimeUnitHourSingular(), hourSingular);
+        hourPlural = getStringOrDefault(dataManager.getTimeUnitHourPlural(), hourPlural);
+        minuteSingular = getStringOrDefault(dataManager.getTimeUnitMinuteSingular(), minuteSingular);
+        minutePlural = getStringOrDefault(dataManager.getTimeUnitMinutePlural(), minutePlural);
+        secondSingular = getStringOrDefault(dataManager.getTimeUnitSecondSingular(), secondSingular);
+        secondPlural = getStringOrDefault(dataManager.getTimeUnitSecondPlural(), secondPlural);
+    }
+
+    private static String getStringOrDefault(String valueFromDataManager, String defaultValue) {
+        return (valueFromDataManager != null && !valueFromDataManager.isEmpty()) ? valueFromDataManager : defaultValue;
+    }
+
+    // Pattern to match time strings like 1d, 2h, 3m, 4s
     private static final Pattern TIME_STRING_PATTERN = Pattern.compile("(\\d+)([smhd])"); // s, m, h, d
 
     /**
@@ -55,10 +89,10 @@ public class TimeUtil {
      */
     public static String formatDuration(long millis) {
         if (millis < 0) {
-            return "N/A"; // Or some error/indicator
+            return "N/A";
         }
         if (millis == 0) {
-            return "0 seconds";
+            return "0" + " " + secondSingular; // e.g. "0 second"
         }
 
         long days = TimeUnit.MILLISECONDS.toDays(millis);
@@ -71,19 +105,21 @@ public class TimeUtil {
 
         StringBuilder sb = new StringBuilder();
         if (days > 0) {
-            sb.append(days).append(" day").append(days > 1 ? "s" : "").append(" ");
+            sb.append(days).append(" ").append(days == 1 ? daySingular : dayPlural);
         }
         if (hours > 0) {
-            sb.append(hours).append(" hour").append(hours > 1 ? "s" : "").append(" ");
+            if (sb.length() > 0) sb.append(" "); // Add space separator
+            sb.append(hours).append(" ").append(hours == 1 ? hourSingular : hourPlural);
         }
         if (minutes > 0) {
-            sb.append(minutes).append(" minute").append(minutes > 1 ? "s" : "").append(" ");
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(minutes).append(" ").append(minutes == 1 ? minuteSingular : minutePlural);
         }
-        if (seconds > 0 || sb.length() == 0) { // Always show seconds if nothing else or if it's the only unit
-            sb.append(seconds).append(" second").append(seconds > 1 ? "s" : "").append(" ");
+        if (seconds > 0 || sb.length() == 0) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(seconds).append(" ").append(seconds == 1 ? secondSingular : secondPlural);
         }
-
-        return sb.toString().trim();
+        return sb.toString(); // No trim needed if spaces are managed correctly
     }
 
     /**

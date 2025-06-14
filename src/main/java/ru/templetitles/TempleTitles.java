@@ -7,7 +7,8 @@ import ru.templetitles.CustomTitulsAdminCommand;
 import ru.templetitles.GUIListener;
 import ru.templetitles.ChatListener;
 import ru.templetitles.TitleInputManager;
-import org.bukkit.Bukkit; // Added for Bukkit.getScheduler()
+import org.bukkit.Bukkit;
+import ru.templetitles.TimeUtil; // Added for TimeUtil.init()
 
 public final class TempleTitles extends JavaPlugin {
 
@@ -27,6 +28,7 @@ public final class TempleTitles extends JavaPlugin {
         
         saveDefaultConfig(); // Copies config.yml if not present
         dataManager = new DataManager(this); // DataManager loads the config
+        TimeUtil.init(dataManager);          // Initialize TimeUtil with loaded DataManager
         titleInputManager = new TitleInputManager();
 
         // Register commands

@@ -115,6 +115,15 @@ public class DataManager {
     // Ban data
     private Map<UUID, Long> titleCreationBans;
 
+    // Time Unit Strings for TimeUtil.formatDuration
+    private String timeUnitDaySingular;
+    private String timeUnitDayPlural;
+    private String timeUnitHourSingular;
+    private String timeUnitHourPlural;
+    private String timeUnitMinuteSingular;
+    private String timeUnitMinutePlural;
+    private String timeUnitSecondSingular;
+    private String timeUnitSecondPlural;
 
     // Dirty flags for saving
     private boolean pendingDirty = false;
@@ -295,6 +304,16 @@ public class DataManager {
         msgPlayerNeverPlayed = Util.translateColors(plugin.getConfig().getString("messages.player_never_played", "&cИгрок %player_name% никогда не играл на сервере и не может быть заблокирован/разблокирован."));
         msgUsageTitleBan = Util.translateColors(plugin.getConfig().getString("messages.usage_titleban", "&eИспользование: /titleban <игрок> <время> (например, 1d, 2h, 30m)"));
         msgUsageTitleUnban = Util.translateColors(plugin.getConfig().getString("messages.usage_titleunban", "&eИспользование: /titleunban <игрок>"));
+
+        // Time Unit Strings
+        timeUnitDaySingular = Util.translateColors(plugin.getConfig().getString("time_format_units.day.singular", " day"));
+        timeUnitDayPlural = Util.translateColors(plugin.getConfig().getString("time_format_units.day.plural", " days"));
+        timeUnitHourSingular = Util.translateColors(plugin.getConfig().getString("time_format_units.hour.singular", " hour"));
+        timeUnitHourPlural = Util.translateColors(plugin.getConfig().getString("time_format_units.hour.plural", " hours"));
+        timeUnitMinuteSingular = Util.translateColors(plugin.getConfig().getString("time_format_units.minute.singular", " minute"));
+        timeUnitMinutePlural = Util.translateColors(plugin.getConfig().getString("time_format_units.minute.plural", " minutes"));
+        timeUnitSecondSingular = Util.translateColors(plugin.getConfig().getString("time_format_units.second.singular", " second"));
+        timeUnitSecondPlural = Util.translateColors(plugin.getConfig().getString("time_format_units.second.plural", " seconds"));
 
         compiledForbiddenPatterns = new ArrayList<>();
         List<String> rawPatterns = plugin.getConfig().getStringList("title_properties.validation.forbidden_patterns");
@@ -776,6 +795,16 @@ public class DataManager {
     public String getMsgPlayerNeverPlayed() { return msgPlayerNeverPlayed; }
     public String getMsgUsageTitleBan() { return msgUsageTitleBan; }
     public String getMsgUsageTitleUnban() { return msgUsageTitleUnban; }
+
+    // Getters for Time Unit Strings
+    public String getTimeUnitDaySingular() { return timeUnitDaySingular; }
+    public String getTimeUnitDayPlural() { return timeUnitDayPlural; }
+    public String getTimeUnitHourSingular() { return timeUnitHourSingular; }
+    public String getTimeUnitHourPlural() { return timeUnitHourPlural; }
+    public String getTimeUnitMinuteSingular() { return timeUnitMinuteSingular; }
+    public String getTimeUnitMinutePlural() { return timeUnitMinutePlural; }
+    public String getTimeUnitSecondSingular() { return timeUnitSecondSingular; }
+    public String getTimeUnitSecondPlural() { return timeUnitSecondPlural; }
 
     // Ban Management Methods
     public void banPlayerTitleCreation(UUID playerUUID, long expiryTimestamp) {
