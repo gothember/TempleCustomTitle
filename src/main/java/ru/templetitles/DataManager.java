@@ -25,8 +25,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.Material;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.configuration.ConfigurationSection;
-import java.util.regex.Pattern; // Added
-import java.util.regex.PatternSyntaxException; // Added
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import java.util.Set; // Added
+import java.util.HashSet; // Added
 
 public class DataManager {
     private final JavaPlugin plugin;
@@ -97,8 +99,22 @@ public class DataManager {
     private boolean patternValidationEnabled;
     private List<Pattern> compiledForbiddenPatterns;
     private String msgTitlePatternViolation;
-    private int maxPendingRequests; // New
-    private String msgMaxPendingRequestsReached; // New
+    private int maxPendingRequests;
+    private String msgMaxPendingRequestsReached;
+    // Ban messages
+    private String msgTitleBanAppliedPlayer;
+    private String msgTitleBanAppliedAdmin;
+    private String msgTitleBanAttemptWhileBanned;
+    private String msgPlayerNotBanned;
+    private String msgTitleUnbanSuccessAdmin;
+    private String msgTitleUnbanNotificationPlayer;
+    private String msgInvalidTimeFormat;
+    private String msgPlayerNeverPlayed; // For offline player handling in ban commands
+    private String msgUsageTitleBan;
+    private String msgUsageTitleUnban;
+    // Ban data
+    private Map<UUID, Long> titleCreationBans;
+
 
     // Dirty flags for saving
     private boolean pendingDirty = false;
@@ -113,11 +129,12 @@ public class DataManager {
     // Placeholder for actual data structures
     private List<TitleRequest> pendingRequestsList = new ArrayList<>();
     private Map<UUID, List<PlayerTitle>> playerTitlesMap = new HashMap<>(); // Changed
-    private Map<UUID, Integer> playerTokensMap = new HashMap<>(); // Added for token management
+    private Map<UUID, Integer> playerTokensMap = new HashMap<>();
 
     public DataManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        loadConfigFile(); // Called before other initializations that might depend on config
+        this.titleCreationBans = new HashMap<>(); // Initialize ban map
+        loadConfigFile();
         setupFiles();
         loadPendingRequests();
         loadPlayerTitles();
@@ -267,6 +284,18 @@ public class DataManager {
         maxPendingRequests = plugin.getConfig().getInt("title_properties.max_pending_requests", 100); // New
         msgMaxPendingRequestsReached = Util.translateColors(plugin.getConfig().getString("messages.max_pending_requests_reached", "&cSorry, the title request queue is currently full. Please try again later.")); // New
 
+        // Ban related messages from config
+        msgTitleBanAppliedPlayer = Util.translateColors(plugin.getConfig().getString("messages.title_ban_applied_player", "&cАдминистратор %admin_name% запретил вам создавать титулы на %duration%."));
+        msgTitleBanAppliedAdmin = Util.translateColors(plugin.getConfig().getString("messages.title_ban_applied_admin", "&aВы запретили игроку %player_name% создавать титулы на %duration%."));
+        msgTitleBanAttemptWhileBanned = Util.translateColors(plugin.getConfig().getString("messages.title_ban_attempt_while_banned", "&cВы не можете создавать титулы. Блокировка истекает %expiry_date% (еще %remaining_time%)."));
+        msgPlayerNotBanned = Util.translateColors(plugin.getConfig().getString("messages.player_not_banned", "&eИгрок %player_name% не имеет активной блокировки на создание титулов."));
+        msgTitleUnbanSuccessAdmin = Util.translateColors(plugin.getConfig().getString("messages.title_unban_success_admin", "&aВы успешно разблокировали игрока %player_name% от создания титулов."));
+        msgTitleUnbanNotificationPlayer = Util.translateColors(plugin.getConfig().getString("messages.title_unban_notification_player", "&aАдминистратор %admin_name% снял с вас блокировку на создание титулов."));
+        msgInvalidTimeFormat = Util.translateColors(plugin.getConfig().getString("messages.invalid_time_format", "&cНеверный формат времени. Используйте, например: 30s, 10m, 1h, 7d."));
+        msgPlayerNeverPlayed = Util.translateColors(plugin.getConfig().getString("messages.player_never_played", "&cИгрок %player_name% никогда не играл на сервере и не может быть заблокирован/разблокирован."));
+        msgUsageTitleBan = Util.translateColors(plugin.getConfig().getString("messages.usage_titleban", "&eИспользование: /titleban <игрок> <время> (например, 1d, 2h, 30m)"));
+        msgUsageTitleUnban = Util.translateColors(plugin.getConfig().getString("messages.usage_titleunban", "&eИспользование: /titleunban <игрок>"));
+
         compiledForbiddenPatterns = new ArrayList<>();
         List<String> rawPatterns = plugin.getConfig().getStringList("title_properties.validation.forbidden_patterns");
         if (rawPatterns != null) {
@@ -335,14 +364,29 @@ public class DataManager {
             UUID playerUUID = entry.getKey();
             List<PlayerTitle> titlesList = entry.getValue();
             String playerPath = "players." + playerUUID.toString();
-            if (titlesList.isEmpty() && (!playerTokensMap.containsKey(playerUUID) || getPlayerTokens(playerUUID) == 0)) {
-                continue;
+            // Ensure player basic data (name, tokens) is saved even if titlesList is empty but tokens or ban exist
+            boolean playerHasTokens = playerTokensMap.containsKey(playerUUID) && getPlayerTokens(playerUUID) > 0;
+            // Check against current time for active ban
+            boolean playerIsBanned = titleCreationBans.containsKey(playerUUID) && titleCreationBans.get(playerUUID) > System.currentTimeMillis();
+
+
+            if (titlesList.isEmpty() && !playerHasTokens && !playerIsBanned) {
+                continue; // Skip saving this player if they have no titles, no tokens, and no active ban
             }
-            String playerName = titlesList.isEmpty() ? (playerTokensMap.containsKey(playerUUID) ? Bukkit.getOfflinePlayer(playerUUID).getName() : "UnknownPlayer") : titlesList.get(0).getPlayerName();
-            if (playerName == null) playerName = "UnknownPlayer"; // Ensure playerName is not null
+
+            String playerName = "UnknownPlayer"; // Default player name
+            if (!titlesList.isEmpty()) {
+                playerName = titlesList.get(0).getPlayerName();
+            } else { // If no titles, try to get name if player has tokens or is banned
+                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
+                 if (offlinePlayer != null && offlinePlayer.getName() != null) {
+                    playerName = offlinePlayer.getName();
+                 }
+            }
 
             playerTitlesConfig.set(playerPath + ".playerName", playerName);
-            playerTitlesConfig.set(playerPath + ".tokens", getPlayerTokens(playerUUID));
+            playerTitlesConfig.set(playerPath + ".tokens", getPlayerTokens(playerUUID)); // Saves 0 if not in map or 0
+
             List<Map<String, Object>> titlesData = new ArrayList<>();
             for (PlayerTitle pt : titlesList) {
                 Map<String, Object> titleMap = new HashMap<>();
@@ -353,17 +397,37 @@ public class DataManager {
                 titlesData.add(titleMap);
             }
             playerTitlesConfig.set(playerPath + ".titles", titlesData);
+
+            // Save active ban status
+            Long banExpiry = this.titleCreationBans.get(playerUUID);
+            if (banExpiry != null && banExpiry > System.currentTimeMillis()) {
+                playerTitlesConfig.set(playerPath + ".title_ban_expiry", banExpiry);
+            } else {
+                playerTitlesConfig.set(playerPath + ".title_ban_expiry", null); // Remove expired or non-existent ban
+            }
         }
-         // Save players who might only have tokens and no titles
-        for (Map.Entry<UUID, Integer> tokenEntry : playerTokensMap.entrySet()) {
-            UUID playerUUID = tokenEntry.getKey();
+
+        // Save players who might only have tokens or bans (and no titles listed in playerTitlesMap)
+        Set<UUID> allPlayerUUIDsWithData = new HashSet<>(playerTokensMap.keySet());
+        allPlayerUUIDsWithData.addAll(titleCreationBans.keySet());
+
+        for (UUID playerUUID : allPlayerUUIDsWithData) {
             String playerPath = "players." + playerUUID.toString();
-            if (!playerTitlesConfig.contains(playerPath)) { // Only save if not already processed by titles loop
-                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
-                 String playerName = offlinePlayer.getName() != null ? offlinePlayer.getName() : "UnknownPlayer";
-                 playerTitlesConfig.set(playerPath + ".playerName", playerName);
-                 playerTitlesConfig.set(playerPath + ".tokens", tokenEntry.getValue());
-                 playerTitlesConfig.set(playerPath + ".titles", new ArrayList<>()); // Empty titles list
+            if (!playerTitlesConfig.contains(playerPath)) { // If not already saved by the playerTitlesMap loop
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerUUID);
+                String playerName = (offlinePlayer != null && offlinePlayer.getName() != null) ? offlinePlayer.getName() : "UnknownPlayer";
+
+                playerTitlesConfig.set(playerPath + ".playerName", playerName);
+                playerTitlesConfig.set(playerPath + ".tokens", getPlayerTokens(playerUUID)); // Saves 0 if not in map
+                playerTitlesConfig.set(playerPath + ".titles", new ArrayList<>()); // Empty titles list
+
+                Long banExpiry = this.titleCreationBans.get(playerUUID);
+                if (banExpiry != null && banExpiry > System.currentTimeMillis()) {
+                    playerTitlesConfig.set(playerPath + ".title_ban_expiry", banExpiry);
+                } else {
+                    // Ensure it's not in config if not active or not present in map
+                    playerTitlesConfig.set(playerPath + ".title_ban_expiry", null);
+                }
             }
         }
         try {
@@ -472,6 +536,18 @@ public class DataManager {
                     }
                 }
                 playerTitlesMap.put(playerUUID, titlesForPlayer);
+
+                // Load ban expiry
+                if (playerTitlesConfig.contains(playerPath + ".title_ban_expiry")) {
+                    long banExpiry = playerTitlesConfig.getLong(playerPath + ".title_ban_expiry");
+                    if (banExpiry > System.currentTimeMillis()) {
+                        this.titleCreationBans.put(playerUUID, banExpiry);
+                    } else if (banExpiry > 0) {
+                        // Optional: Clean up expired ban from config immediately
+                        // playerTitlesConfig.set(playerPath + ".title_ban_expiry", null);
+                        // this.titlesDirty = true;
+                    }
+                }
             }
         }
     }
@@ -686,6 +762,53 @@ public class DataManager {
     public boolean isPatternValidationEnabled() { return patternValidationEnabled; }
     public List<Pattern> getCompiledForbiddenPatterns() { return compiledForbiddenPatterns; }
     public String getMsgTitlePatternViolation() { return msgTitlePatternViolation; }
-    public int getMaxPendingRequests() { return maxPendingRequests; } // New
-    public String getMsgMaxPendingRequestsReached() { return msgMaxPendingRequestsReached; } // New
+    public int getMaxPendingRequests() { return maxPendingRequests; }
+    public String getMsgMaxPendingRequestsReached() { return msgMaxPendingRequestsReached; }
+
+    // Getters for Ban Messages
+    public String getMsgTitleBanAppliedPlayer() { return msgTitleBanAppliedPlayer; }
+    public String getMsgTitleBanAppliedAdmin() { return msgTitleBanAppliedAdmin; }
+    public String getMsgTitleBanAttemptWhileBanned() { return msgTitleBanAttemptWhileBanned; }
+    public String getMsgPlayerNotBanned() { return msgPlayerNotBanned; }
+    public String getMsgTitleUnbanSuccessAdmin() { return msgTitleUnbanSuccessAdmin; }
+    public String getMsgTitleUnbanNotificationPlayer() { return msgTitleUnbanNotificationPlayer; }
+    public String getMsgInvalidTimeFormat() { return msgInvalidTimeFormat; }
+    public String getMsgPlayerNeverPlayed() { return msgPlayerNeverPlayed; }
+    public String getMsgUsageTitleBan() { return msgUsageTitleBan; }
+    public String getMsgUsageTitleUnban() { return msgUsageTitleUnban; }
+
+    // Ban Management Methods
+    public void banPlayerTitleCreation(UUID playerUUID, long expiryTimestamp) {
+        if (playerUUID == null) return;
+        this.titleCreationBans.put(playerUUID, expiryTimestamp);
+        this.titlesDirty = true;
+    }
+
+    public void unbanPlayerTitleCreation(UUID playerUUID) {
+        if (playerUUID == null) return;
+        if (this.titleCreationBans.remove(playerUUID) != null) {
+            this.titlesDirty = true;
+        }
+    }
+
+    public boolean isPlayerBannedFromTitleCreation(UUID playerUUID) {
+        if (playerUUID == null) return false;
+        Long expiryTimestamp = this.titleCreationBans.get(playerUUID);
+        if (expiryTimestamp == null) {
+            return false;
+        }
+        if (System.currentTimeMillis() < expiryTimestamp) {
+            return true;
+        } else {
+            this.titleCreationBans.remove(playerUUID); // Lazy cleanup
+            this.titlesDirty = true;
+            return false;
+        }
+    }
+
+    public long getBanExpiryTimestamp(UUID playerUUID) {
+        if (playerUUID == null) return 0L;
+        Long expiry = this.titleCreationBans.get(playerUUID);
+        return (expiry != null) ? expiry : 0L;
+    }
 }

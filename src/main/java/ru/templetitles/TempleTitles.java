@@ -32,8 +32,10 @@ public final class TempleTitles extends JavaPlugin {
         // Register commands
         this.getCommand("customtitul").setExecutor(new CustomTitulCommand(this));
         this.getCommand("customtituls").setExecutor(new CustomTitulsAdminCommand(this));
-        TokenCommand tokenCommand = new TokenCommand(this, dataManager); // New
-        this.getCommand("tokens").setExecutor(tokenCommand); // New
+        TokenCommand tokenCommand = new TokenCommand(this, dataManager);
+        this.getCommand("tokens").setExecutor(tokenCommand);
+        this.getCommand("titleban").setExecutor(new TitleBanCommand(this, dataManager));
+        this.getCommand("titleunban").setExecutor(new TitleUnbanCommand(this, dataManager)); // New
         getLogger().info("Commands registered.");
 
         // Register event listeners

@@ -20,6 +20,19 @@ commands:
     usage: /tokens give <player> <amount>
     permission: templetitles.tokens.give
     permission-message: You do not have permission to use this command.
+  # New Commands for Title Ban Feature
+  titleban:
+    description: Bans a player from creating custom titles for a specified duration.
+    usage: /titleban <player> <time>
+    permission: templetitles.ban
+    permission-message: "You do not have permission to use this command."
+    aliases: [tban]
+  titleunban:
+    description: Unbans a player from creating custom titles.
+    usage: /titleunban <player>
+    permission: templetitles.unban
+    permission-message: "You do not have permission to use this command."
+    aliases: [tunban]
 permissions:
   templetitles.use:
     description: Allows use of the /customtitul command.
@@ -29,4 +42,11 @@ permissions:
     default: op
   templetitles.tokens.give: # New permission
     description: Allows giving tokens to players.
+    default: op
+  # New Permissions for Title Ban Feature
+  templetitles.ban:
+    description: Allows banning players from creating custom titles.
+    default: op
+  templetitles.unban:
+    description: Allows unbanning players from creating custom titles.
     default: op

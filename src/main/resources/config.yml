@@ -53,6 +53,24 @@ messages:
     admin_title_rejected_feedback: "&cTitle '%title%' rejected for player %player%."
   # Message for when the admin review queue for titles is full
   max_pending_requests_reached: "&cSorry, the title request queue is currently full. Please try again later."
+  # Title Ban Feature Messages
+  # %admin_name% - Name of admin who applied ban. %duration% - Duration of ban.
+  title_ban_applied_player: "&cАдминистратор %admin_name% запретил вам создавать титулы на %duration%."
+  # %player_name% - Player who was banned. %duration% - Duration of ban.
+  title_ban_applied_admin: "&aВы запретили игроку %player_name% создавать титулы на %duration%."
+  # %expiry_date% - When the ban expires. %remaining_time% - Remaining duration.
+  title_ban_attempt_while_banned: "&cВы не можете создавать титулы. Блокировка истекает %expiry_date% (еще %remaining_time%)."
+  # %player_name% - Player checked.
+  player_not_banned: "&eИгрок %player_name% не имеет активной блокировки на создание титулов."
+  # %player_name% - Player unbanned.
+  title_unban_success_admin: "&aВы успешно разблокировали игрока %player_name% от создания титулов."
+  # %admin_name% - Admin who removed the ban.
+  title_unban_notification_player: "&aАдминистратор %admin_name% снял с вас блокировку на создание титулов."
+  invalid_time_format: "&cНеверный формат времени. Используйте, например: 30s, 10m, 1h, 7d."
+  # %player_name% - Player who has never played.
+  player_never_played: "&cИгрок %player_name% никогда не играл на сервере и не может быть заблокирован/разблокирован."
+  usage_titleban: "&eИспользование: /titleban <игрок> <время> (например, 1d, 2h, 30m)"
+  usage_titleunban: "&eИспользование: /titleunban <игрок>"
 
 #--------------------------------------------------#
 # LuckPerms Integration Settings                   #

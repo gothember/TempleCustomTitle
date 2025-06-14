@@ -70,14 +70,47 @@ public class GUIListener implements Listener {
             // String viewOwnedItemName = dataManager.getGuiMainMenuItemViewOwnedName();
 
             // Logic based on slot as before, assuming fixed layout
-            // int slot = event.getRawSlot(); // Already have clickedSlot
             if (clickedSlot == 22 && clickedItem.getType() == Material.PAPER) { // Request New Title
+                UUID playerUUID = player.getUniqueId();
+
+                // === NEW BAN CHECK START ===
+                if (dataManager.isPlayerBannedFromTitleCreation(playerUUID)) {
+                    long expiryTimestamp = dataManager.getBanExpiryTimestamp(playerUUID);
+                    String remainingTime = "N/A";
+                    String expiryDate = "N/A";
+
+                    if (expiryTimestamp > 0) {
+                        // Check if ban is effectively permanent (very far future) or has a specific remaining time
+                        if (expiryTimestamp == Long.MAX_VALUE) {
+                            remainingTime = "Permanent";
+                            expiryDate = "Never";
+                        } else {
+                            long currentMillis = System.currentTimeMillis();
+                            if (expiryTimestamp > currentMillis) {
+                                remainingTime = TimeUtil.formatDuration(expiryTimestamp - currentMillis);
+                            } else {
+                                remainingTime = "Expired"; // Should be caught by isPlayerBannedFromTitleCreation already
+                            }
+                            expiryDate = TimeUtil.formatTimestamp(expiryTimestamp, dataManager.getTimeFormat());
+                        }
+                    }
+
+                    String banMessage = dataManager.getMsgTitleBanAttemptWhileBanned()
+                                            .replace("%expiry_date%", expiryDate)
+                                            .replace("%remaining_time%", remainingTime);
+                    player.sendMessage(banMessage);
+
+                    player.closeInventory();
+                    return;
+                }
+                // === NEW BAN CHECK END ===
+
                 int requiredTokens = dataManager.getTitleRequestCost();
-                if (dataManager.getPlayerTokens(player.getUniqueId()) >= requiredTokens) {
-                    dataManager.removePlayerTokens(player.getUniqueId(), requiredTokens);
+                if (dataManager.getPlayerTokens(playerUUID) >= requiredTokens) {
+                    dataManager.removePlayerTokens(playerUUID, requiredTokens);
                     player.closeInventory();
                     titleInputManager.startTitleInput(player);
-                    player.sendMessage(dataManager.getMsgTitleInputPrompt()); // Use DataManager
+                    player.sendMessage(dataManager.getMsgTitleInputPrompt());
                 } else {
                     player.sendMessage(dataManager.getMsgInsufficientTokens().replace("%required_tokens%", String.valueOf(requiredTokens)));
                     player.closeInventory();
